@@ -80,7 +80,6 @@ public class ChapterVectorService {
 
 
         } catch (Exception e) {
-            log.error("비동기 작업 중 실패 - ChapterId: {}, 이유: {}", chapterId, e.getMessage());
             // 필요하다면 여기서 '실패 상태'를 DB에 기록하는 로직을 추가할 수 있습니다.
         }
     }
