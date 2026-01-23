@@ -24,48 +24,53 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
+        private final JwtTokenProvider jwtTokenProvider;
+        private final UserRepository userRepository;
+        private final RefreshTokenRepository refreshTokenRepository;
 
-    @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        // 1. 로그인된 유저 정보 가져오기
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        Map<String, Object> attributes = oAuth2User.getAttributes();
+        @Override
+        public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                        Authentication authentication) throws IOException, ServletException {
+                // 1. 로그인된 유저 정보 가져오기
+                OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+                Map<String, Object> attributes = oAuth2User.getAttributes();
 
-        String loginId = (String) attributes.get("loginId");
+                String loginId = (String) attributes.get("loginId");
 
-        log.info("로그인 성공! Target Login ID: {}", loginId);
+                log.info("로그인 성공! Target Login ID: {}", loginId);
 
-        // 2. DB에서 유저 조회 (loginId가 정확하므로 무조건 성공)
-        User user = userRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new RuntimeException("User not found after OAuth2 login"));
+                // 2. DB에서 유저 조회 (loginId가 정확하므로 무조건 성공)
+                User user = userRepository.findByLoginId(loginId)
+                                .orElseThrow(() -> new RuntimeException("User not found after OAuth2 login"));
 
-        // 3. 토큰 발급
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole());
-        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+                // 3. 토큰 발급
+                String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole());
+                String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        // 4. 리프레시 토큰 저장 (기존 토큰 있으면 업데이트, 없으면 생성)
-        RefreshToken existingToken = refreshTokenRepository.findByUserId(user.getId())
-                .orElse(null);
+                // 4. 리프레시 토큰 저장 (기존 토큰 있으면 업데이트, 없으면 생성)
+                RefreshToken existingToken = refreshTokenRepository.findByUserId(user.getId())
+                                .orElse(null);
 
-        if (existingToken != null) {
-            existingToken.updateToken(refreshToken);
-            refreshTokenRepository.save(existingToken);
-        } else {
-            refreshTokenRepository.save(RefreshToken.builder()
-                    .userId(user.getId())
-                    .token(refreshToken)
-                    .build());
+                if (existingToken != null) {
+                        existingToken.updateToken(refreshToken);
+                        refreshTokenRepository.save(existingToken);
+                } else {
+                        refreshTokenRepository.save(RefreshToken.builder()
+                                        .userId(user.getId())
+                                        .token(refreshToken)
+                                        .build());
+                }
+
+                // 5. 리다이렉트 (프론트엔드 Callback 페이지로 이동)
+                // isNewUser 판별: CustomOAuth2UserService에서 넣어준 attributes 확인
+                boolean isNewUser = Boolean.TRUE.equals(attributes.get("isNewUser"));
+
+                String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+                                .queryParam("accessToken", accessToken)
+                                .queryParam("refreshToken", refreshToken)
+                                .queryParam("isNewUser", isNewUser)
+                                .build().toUriString();
+
+                getRedirectStrategy().sendRedirect(request, response, targetUrl);
         }
-
-        // 5. 리다이렉트 (Context Path '/api' 주의)
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:8080/api/v1/auth/oauth-success")
-                .queryParam("accessToken", accessToken)
-                .queryParam("refreshToken", refreshToken)
-                .build().toUriString();
-
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
-    }
 }

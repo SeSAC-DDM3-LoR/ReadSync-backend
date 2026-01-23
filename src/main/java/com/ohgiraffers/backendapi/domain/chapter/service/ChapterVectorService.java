@@ -18,6 +18,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChapterVectorService {
 
     private final ChapterVectorRepository chapterVectorRepository;
@@ -39,6 +40,7 @@ public class ChapterVectorService {
                 .map(ChapterVectorResponseDTO::getEmbedding)
                 .block(Duration.ofSeconds(1000)); // 결과가 올 때까지 잠시 대기
     }
+
     public float[] getVectorGD(String googleDriveUrl) {
         return embeddingServerWebClient.post()
                 .uri("/api/v1/embed-from-drive")
@@ -63,7 +65,6 @@ public class ChapterVectorService {
             // (더 고도화하려면 이 부분을 트랜잭션 밖으로 빼야 하지만, 현 단계에선 이 방식도 무방합니다)
             float[] vectorResponse = getVectorGD(chapter.getBookContentPath());
 
-
             // 3. Upsert 로직 (DB 작업)
             ChapterVector chapterVector = chapterVectorRepository.findById(chapterId)
                     .map(existingVector -> {
@@ -78,8 +79,8 @@ public class ChapterVectorService {
             // 4. 최종 저장
             chapterVectorRepository.save(chapterVector);
 
-
         } catch (Exception e) {
+            log.error("비동기 작업 중 실패 - ChapterId: {}, 이유: {}", chapterId, e.getMessage());
             // 필요하다면 여기서 '실패 상태'를 DB에 기록하는 로직을 추가할 수 있습니다.
         }
     }

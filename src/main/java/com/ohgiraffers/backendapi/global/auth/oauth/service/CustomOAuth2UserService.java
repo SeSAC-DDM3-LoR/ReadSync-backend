@@ -53,21 +53,26 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         // 4. 강제 로그인 로직 (회원가입 or 업데이트)
-        User user = saveOrUpdate(oAuth2UserInfo);
+        UserResult userResult = saveOrUpdate(oAuth2UserInfo);
+        User user = userResult.user;
 
         Map<String, Object> customAttribute = new HashMap<>(oAuth2User.getAttributes());
         customAttribute.put("loginId", user.getLoginId());
         customAttribute.put("role", user.getRole().getKey());
+        customAttribute.put("isNewUser", userResult.isNewUser);
 
         // 5. 시큐리티 세션에 저장할 객체 반환
         return new DefaultOAuth2User(
                 Collections.singleton(new SimpleGrantedAuthority(user.getRole().getKey())),
                 customAttribute,
-                userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName()
-        );
+                userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint()
+                        .getUserNameAttributeName());
     }
 
-    private User saveOrUpdate(OAuth2UserInfo attributes) {
+    private record UserResult(User user, boolean isNewUser) {
+    }
+
+    private UserResult saveOrUpdate(OAuth2UserInfo attributes) {
         // provider + providerId 로 유저를 찾는다.
         String provider = attributes.getProvider();
         String providerId = attributes.getProviderId();
@@ -76,10 +81,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         Optional<User> userOptional = userRepository.findByLoginId(loginId);
 
         User user;
+        boolean isNewUser = false;
+
         if (userOptional.isPresent()) {
             user = userOptional.get();
             // 기존 유저라면 정보 업데이트 (프로필 사진 등 변경되었을 수 있으므로)
             // 필요하다면 update 로직 추가 (현재는 생략됨)
+            isNewUser = false;
         } else {
             // 신규 가입 -> DB 저장
             user = User.builder()
@@ -105,15 +113,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .levelId(1L)
                     .build();
             userInformationRepository.save(userInfo);
+            isNewUser = true;
         }
-        return user;
+        return new UserResult(user, isNewUser);
     }
 
     private String generateUniqueTag(String nickname) {
         String tag;
         do {
             int randomNum = new Random().nextInt(10000); // 0 ~ 9999
-            tag = String.format("%04d", randomNum);      // 4자리 문자열 (예: "0012")
+            tag = String.format("%04d", randomNum); // 4자리 문자열 (예: "0012")
         } while (userInformationRepository.existsByNicknameAndTag(nickname, tag));
         return tag;
     }
