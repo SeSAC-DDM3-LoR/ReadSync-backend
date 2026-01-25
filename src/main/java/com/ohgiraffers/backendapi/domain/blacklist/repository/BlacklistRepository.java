@@ -22,7 +22,7 @@ public interface BlacklistRepository extends JpaRepository<Blacklist, Long> {
 
     List<Blacklist> findByUserOrderByCreatedAtDesc(User user);
 
-    
+
     @Query("SELECT b FROM Blacklist b WHERE b.isActive = true AND b.endDate > :now ORDER BY b.startDate DESC")
     List<Blacklist> findAllActiveBlacklists(@Param("now") LocalDateTime now);
 }

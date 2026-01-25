@@ -14,6 +14,8 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C001", "서버 내부 오류가 발생했습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C002", "잘못된 입력값입니다."),
     INVALID_TYPE_VALUE(HttpStatus.BAD_REQUEST, "C003", "잘못된 타입입니다."),
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "C004", "해당 리소스를 찾을 수 없습니다."),
+    DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "C005", "이미 존재하는 데이터입니다."),
 
     // 인증/권환
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
@@ -76,6 +78,9 @@ public enum ErrorCode {
     INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R013", "존재하지 않거나 삭제된 초대장입니다."),
     INVITATION_EXPIRED(HttpStatus.BAD_REQUEST, "R014", "만료된 초대장입니다."),
 
+    // 채팅
+    CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "CHT001", "해당 채팅 로그를 찾을 수 없습니다."),
+
     // 장바구니
     CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "CA001", "장바구니에서 해당 항목을 찾을 수 없습니다."),
 
@@ -83,6 +88,9 @@ public enum ErrorCode {
     PAYMENT_METHOD_NOT_FOUND(HttpStatus.BAD_REQUEST, "PAY001", "등록된 기본 결제 수단이 없습니다. 카드를 먼저 등록해주세요."),
     ALREADY_SUBSCRIBED(HttpStatus.BAD_REQUEST, "SUB001", "이미 구독 중인 사용자입니다."),
     ROOM_FINISHED(HttpStatus.CONFLICT, "R015", "종료된 독서룸입니다."),
+
+    // 블랙리스트
+    USER_BANNED(HttpStatus.FORBIDDEN, "BL001", "정지된 계정입니다."),
 
     // 신고
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "RPT001", "해당 신고를 찾을 수 없습니다."),
