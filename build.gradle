@@ -78,6 +78,9 @@ dependencies {
 
     // halfvec 의존성 - 김정우 추가
     implementation 'org.hibernate.orm:hibernate-vector:6.6.0.Final'
+
+    // AWS S3
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.2.1'
 }
 
 tasks.named('test') {

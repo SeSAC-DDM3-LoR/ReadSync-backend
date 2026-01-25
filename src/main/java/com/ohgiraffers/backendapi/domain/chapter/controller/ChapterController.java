@@ -21,7 +21,7 @@ public class ChapterController {
 
     private final ChapterService chapterService;
 
-    @Operation(summary = "[관리자] 챕터 등록 (파일 업로드)", description = "JSON 파일을 업로드하여 챕터를 생성. 메타데이터 미입력 시 파일에서 자동 추출.")
+    @Operation(summary = "[Local] [관리자] 챕터 등록 (파일 업로드)", description = "JSON 파일을 로컬 서버에 업로드하여 챕터를 생성. 메타데이터 미입력 시 파일에서 자동 추출.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> createChapter(
@@ -40,6 +40,25 @@ public class ChapterController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "[AWS] [관리자] 챕터 등록 (S3 업로드)", description = "JSON 파일을 AWS S3에 업로드하여 챕터를 생성.")
+    @PostMapping(value = "/s3", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ChapterResponseDTO> createChapterS3(
+            @RequestPart(value = "file") MultipartFile file,
+            @RequestParam(value = "bookId") Long bookId,
+            @RequestParam(value = "chapterName", required = false) String chapterName,
+            @RequestParam(value = "sequence", required = false) Integer sequence) {
+        ChapterRequestDTO requestDTO = ChapterRequestDTO.builder()
+                .bookId(bookId)
+                .chapterName(chapterName)
+                .sequence(sequence)
+                .file(file)
+                .build();
+
+        ChapterResponseDTO response = chapterService.createChapterS3(requestDTO);
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "[관리자] 챕터 등록 (URL 기반)", description = "URL을 입력하여 챕터를 생성. 문단 개수(paragraphs)도 함께 입력 가능.")
     @PostMapping("/url")
     @PreAuthorize("hasRole('ADMIN')")
@@ -49,7 +68,7 @@ public class ChapterController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "[관리자] 챕터 수정 (파일 업로드)", description = "챕터의 파일 또는 메타데이터를 수정. 파일 변경 시 'isEmbedded' 상태가 초기화됨.")
+    @Operation(summary = "[Local] [관리자] 챕터 수정 (파일 업로드)", description = "챕터의 파일(로컬) 또는 메타데이터를 수정. 파일 변경 시 'isEmbedded' 상태가 초기화됨.")
     @PutMapping(value = "/{chapterId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> updateChapter(
@@ -65,6 +84,24 @@ public class ChapterController {
                 .build();
 
         ChapterResponseDTO response = chapterService.updateChapter(chapterId, requestDTO);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "[AWS] [관리자] 챕터 수정 (S3 업로드)", description = "챕터의 파일(S3) 또는 메타데이터를 수정. 파일 변경 시 'isEmbedded' 상태가 초기화됨.")
+    @PutMapping(value = "/{chapterId}/s3", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ChapterResponseDTO> updateChapterS3(
+            @PathVariable Long chapterId,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "chapterName", required = false) String chapterName,
+            @RequestParam(value = "sequence", required = false) Integer sequence) {
+        ChapterRequestDTO requestDTO = ChapterRequestDTO.builder()
+                .chapterName(chapterName)
+                .sequence(sequence)
+                .file(file)
+                .build();
+
+        ChapterResponseDTO response = chapterService.updateChapterS3(chapterId, requestDTO);
         return ResponseEntity.ok(response);
     }
 
@@ -86,11 +123,19 @@ public class ChapterController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "[사용자/관리자용] 챕터 조회 (뷰어용)", description = "챕터의 상세 정보와 함께 파일에 저장된 본문 내용(JSON)을 반환.")
+    @Operation(summary = "[Local] [사용자/관리자용] 챕터 조회 (테스트용)", description = "챕터의 상세 정보와 함께 파일에 저장된 본문 내용(JSON)을 반환.")
     @GetMapping("/{chapterId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ChapterResponseDTO> getChapter(@PathVariable Long chapterId) {
         ChapterResponseDTO response = chapterService.getChapter(chapterId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "[사용자/관리자용] 챕터 URL 조회(실제 서비스용)", description = "챕터의 상세 정보와 함께 저장된 파일/URL 경로만 반환 (본문 내용 로딩 안 함).")
+    @GetMapping("/{chapterId}/url")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<ChapterResponseDTO> getChapterUrl(@PathVariable Long chapterId) {
+        ChapterResponseDTO response = chapterService.getChapterUrl(chapterId);
         return ResponseEntity.ok(response);
     }
 }
