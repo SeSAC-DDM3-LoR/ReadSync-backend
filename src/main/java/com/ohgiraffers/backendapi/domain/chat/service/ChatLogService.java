@@ -5,8 +5,10 @@ import com.ohgiraffers.backendapi.domain.chat.dto.ChatMessageResponse;
 import com.ohgiraffers.backendapi.domain.chat.entity.ChatLog;
 import com.ohgiraffers.backendapi.domain.chat.repository.ChatLogRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.entity.ReadingRoom;
+import com.ohgiraffers.backendapi.domain.readingroom.enums.ConnectionStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.RoomStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.ReadingRoomRepository;
+import com.ohgiraffers.backendapi.domain.readingroom.repository.RoomParticipantRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.error.CustomException;
@@ -30,6 +32,7 @@ public class ChatLogService {
     private final ChatLogRepository chatLogRepository;
     private final ReadingRoomRepository readingRoomRepository;
     private final UserRepository userRepository;
+    private final RoomParticipantRepository roomParticipantRepository;
 
     // Redis
     private final RedisTemplate<String, Object> redisTemplate;
@@ -45,11 +48,18 @@ public class ChatLogService {
         ReadingRoom readingRoom = readingRoomRepository.findById(request.getRoomId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
 
+        // 참여자 검증: 활성 참여자만 메시지 전송 가능
+        boolean isActiveParticipant = roomParticipantRepository
+                .existsByReadingRoomAndUserAndConnectionStatus(
+                        readingRoom, user, ConnectionStatus.ACTIVE);
+        if (!isActiveParticipant) {
+            throw new CustomException(ErrorCode.NOT_ROOM_PARTICIPANT);
+        }
+
         // 종료된 방인지 확인
         if (readingRoom.getStatus() == RoomStatus.FINISHED) { // RoomStatus Enum 가정
             throw new CustomException(ErrorCode.ROOM_FINISHED);
         }
-
 
         // Entity 생성
         ChatLog chatLog;
@@ -72,7 +82,6 @@ public class ChatLogService {
         log.info("Message sent to Redis Channel [{}]: {}", channel, response.getContent());
     }
 
-
     // 채팅방 입장 시 최근 메시지 로딩
     public List<ChatMessageResponse> getRecentMessage(Long roomId) {
         validateRoomExists(roomId);
@@ -88,7 +97,6 @@ public class ChatLogService {
                 .map(ChatMessageResponse::from)
                 .collect(Collectors.toList());
     }
-
 
     // 스크롤 올려서 과거 메시지 로딩(커서 페이징)
     @Transactional(readOnly = true)

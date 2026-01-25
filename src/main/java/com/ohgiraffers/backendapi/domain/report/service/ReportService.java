@@ -51,6 +51,11 @@ public class ReportService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "본인의 채팅은 신고할 수 없습니다.");
         }
 
+        // 4. 중복 신고 방지
+        if (reportRepository.existsByReporterAndChatLog(reporter, chatLog)) {
+            throw new CustomException(ErrorCode.DUPLICATE_REPORT);
+        }
+
         // 4. 신고 저장
         Report report = Report.builder()
                 .reporter(reporter)

@@ -1,5 +1,8 @@
 package com.ohgiraffers.backendapi.domain.readingroom.service;
 
+import com.ohgiraffers.backendapi.domain.exp.dto.ExpLogRequestDTO;
+import com.ohgiraffers.backendapi.domain.exp.enums.ActivityType;
+import com.ohgiraffers.backendapi.domain.exp.service.ExpLogService;
 import com.ohgiraffers.backendapi.domain.library.entity.Library;
 import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.dto.CreateRoomRequest;
@@ -7,17 +10,22 @@ import com.ohgiraffers.backendapi.domain.readingroom.entity.ReadingRoom;
 import com.ohgiraffers.backendapi.domain.readingroom.entity.RoomParticipant;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.ConnectionStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.RoomStatus;
+import com.ohgiraffers.backendapi.domain.readingroom.event.RoomFinishedEvent;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.ReadingRoomRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.RoomParticipantRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
+import com.ohgiraffers.backendapi.domain.user.enums.UserActivityStatus;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
+import com.ohgiraffers.backendapi.domain.user.service.UserStatusService;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -29,6 +37,9 @@ public class ReadingRoomService {
     private final RoomParticipantRepository roomParticipantRepository;
     private final UserRepository userRepository;
     private final LibraryRepository libraryRepository;
+    private final ExpLogService expLogService;
+    private final UserStatusService userStatusService;
+    private final ApplicationEventPublisher publisher;
 
     // 독서룸 생성
     @Transactional
@@ -59,17 +70,10 @@ public class ReadingRoomService {
         ReadingRoom savedRoom = readingRoomRepository.save(room);
 
         // 참여자 확인
-        RoomParticipant hostParticipant = RoomParticipant.builder()
-                .readingRoom(savedRoom)
-                .user(host)
-                .build();
-
-        roomParticipantRepository.save(hostParticipant);
+        enterRoom(hostId, savedRoom.getRoomId());
 
         return savedRoom.getRoomId();
     }
-
-
 
     // 방 입장
     @Transactional
@@ -94,7 +98,8 @@ public class ReadingRoomService {
             }
 
             // 현재 인원 확인
-            long currentCount = roomParticipantRepository.countByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
+            long currentCount = roomParticipantRepository.countByReadingRoomAndConnectionStatus(room,
+                    ConnectionStatus.ACTIVE);
             if (currentCount >= room.getMaxCapacity()) {
                 throw new CustomException(ErrorCode.ROOM_IS_FULL);
             }
@@ -105,9 +110,10 @@ public class ReadingRoomService {
                     .build();
             roomParticipantRepository.save(newParticipant);
         }
+
+        // 방 입장 시 상태를 '독서중'으로 변경
+        userStatusService.updateUserStatus(userId, UserActivityStatus.READING);
     }
-
-
 
     // 방 퇴장
     @Transactional
@@ -117,13 +123,26 @@ public class ReadingRoomService {
         RoomParticipant participant = getParticipant(room, user);
 
         if (room.getHost().getId().equals(userId)) {
+            // 방장이 퇴장하면 모든 참여자 상태를 ONLINE으로 변경
+            List<RoomParticipant> activeParticipants = roomParticipantRepository
+                    .findAllByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
+
+            activeParticipants.forEach(p -> {
+                if (!p.getUser().getId().equals(userId)) { // 방장 제외
+                    userStatusService.updateUserStatus(p.getUser().getId(), UserActivityStatus.ONLINE);
+                }
+            });
+
+            // 이벤트 발행 (초대장 만료 등 후속 처리)
+            publisher.publishEvent(new RoomFinishedEvent(roomId));
             room.finishRoom();
         } else {
             participant.leave();
         }
 
+        // 방 퇴장 시 상태를 '온라인'으로 변경
+        userStatusService.updateUserStatus(userId, UserActivityStatus.ONLINE);
     }
-
 
     // 회원 강퇴
     @Transactional
@@ -136,7 +155,6 @@ public class ReadingRoomService {
 
         targetParticipant.kick();
     }
-
 
     // 재생속도 변경
     @Transactional
@@ -162,8 +180,29 @@ public class ReadingRoomService {
         ReadingRoom room = getRoom(roomId);
         validateHost(room, hostId);
 
-        // TODO: 경험치 지급 로직 (추후 구현)
+        // 경험치 지급 로직: 활성 상태인 모든 참여자에게 EXP 지급
+        List<RoomParticipant> activeParticipants = roomParticipantRepository
+                .findAllByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
 
+        activeParticipants.forEach(participant -> {
+            ExpLogRequestDTO expRequest = ExpLogRequestDTO.builder()
+                    .userId(participant.getUser().getId())
+                    .activityType(ActivityType.READ_BOOK)
+                    .categoryId(room.getLibrary().getBook().getCategory().getCategoryId())
+                    .targetId(room.getLibrary().getBook().getBookId())
+                    .referenceId(room.getRoomId())
+                    .build();
+
+            try {
+                expLogService.giveExperience(expRequest);
+            } catch (IllegalArgumentException e) {
+                // 중복 지급 방지: 이미 경험치를 받은 경우 무시
+                // 로그만 남기고 계속 진행
+            }
+        });
+
+        // 방 종료 이벤트 발행 (초대장 만료 등 후속 처리)
+        publisher.publishEvent(new RoomFinishedEvent(roomId));
         room.finishRoom();
     }
 

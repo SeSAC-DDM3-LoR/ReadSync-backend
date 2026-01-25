@@ -5,6 +5,7 @@ import com.ohgiraffers.backendapi.domain.readingroom.entity.RoomInvitation;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.ConnectionStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.InvitationStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.RoomStatus;
+import com.ohgiraffers.backendapi.domain.readingroom.event.RoomFinishedEvent;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.ReadingRoomRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.RoomInvitationRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.RoomParticipantRepository;
@@ -13,10 +14,11 @@ import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,9 +30,6 @@ public class RoomInvitationService {
     private final RoomParticipantRepository roomParticipantRepository;
     private final UserRepository userRepository;
 
-    // TODO: ReadingRoomService 의존성 주입으로 인한 순환 참조 문제
-    // TODO: 추후 ReadingRoom 파훼시 Invitation 또한 없애고자 할 때
-    // TODO: ReadingRoomService에서 private Final 로 불러와선 안됨!
     private final ReadingRoomService readingRoomService;
 
     // 초대장 발송
@@ -50,7 +49,8 @@ public class RoomInvitationService {
         }
 
         // 인원 수 체크
-        if (roomParticipantRepository.countByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE) >= room.getMaxCapacity()) {
+        if (roomParticipantRepository.countByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE) >= room
+                .getMaxCapacity()) {
             throw new CustomException(ErrorCode.INVITATION_NOT_ALLOWED_FULL);
         }
 
@@ -59,7 +59,8 @@ public class RoomInvitationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 이미 초대를 받았는지 체크하기
-        if (invitationRepository.findByReadingRoomAndReceiverAndStatus(room, receiver, InvitationStatus.PENDING).isPresent()) {
+        if (invitationRepository.findByReadingRoomAndReceiverAndStatus(room, receiver, InvitationStatus.PENDING)
+                .isPresent()) {
             throw new CustomException(ErrorCode.ALREADY_INVITED);
         }
 
@@ -71,7 +72,6 @@ public class RoomInvitationService {
 
         invitationRepository.save(invitation);
     }
-
 
     // 초대장 수락
     @Transactional
@@ -95,7 +95,6 @@ public class RoomInvitationService {
 
     }
 
-
     // 초대장 거절
     @Transactional
     public void rejectInvitation(Long invitationId, Long userId) {
@@ -107,7 +106,24 @@ public class RoomInvitationService {
         invitation.reject();
     }
 
+    // 독서룸 종료 시 해당 방의 모든 PENDING 초대장을 EXPIRED로 변경 (이벤트 기반)
+    @EventListener
+    @Transactional
+    public void handleRoomFinishedEvent(RoomFinishedEvent event) {
+        expireInvitationsForRoom(event.roomId());
+    }
 
+    // 독서룸 종료 시 해당 방의 모든 PENDING 초대장을 EXPIRED로 변경
+    @Transactional
+    public void expireInvitationsForRoom(Long roomId) {
+        ReadingRoom room = readingRoomRepository.findById(roomId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
+
+        List<RoomInvitation> pendingInvitations = invitationRepository
+                .findByReadingRoomAndStatus(room, InvitationStatus.PENDING);
+
+        pendingInvitations.forEach(RoomInvitation::expire);
+    }
 
     // --- Private Helper Methods ---
     private void validateReceiver(RoomInvitation invitation, Long userId) {
