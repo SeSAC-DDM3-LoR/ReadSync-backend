@@ -72,7 +72,7 @@ public class ChapterController {
     @PutMapping(value = "/{chapterId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> updateChapter(
-            @PathVariable Long chapterId,
+            @PathVariable("chapterId") Long chapterId,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "chapterName", required = false) String chapterName,
             @RequestParam(value = "sequence", required = false) Integer sequence) {
@@ -91,7 +91,7 @@ public class ChapterController {
     @PutMapping(value = "/{chapterId}/s3", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> updateChapterS3(
-            @PathVariable Long chapterId,
+            @PathVariable("chapterId") Long chapterId,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "chapterName", required = false) String chapterName,
             @RequestParam(value = "sequence", required = false) Integer sequence) {
@@ -109,7 +109,7 @@ public class ChapterController {
     @PutMapping("/{chapterId}/url")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> updateChapterByUrl(
-            @PathVariable Long chapterId,
+            @PathVariable("chapterId") Long chapterId,
             @RequestBody ChapterUrlRequestDTO requestDTO) {
         ChapterResponseDTO response = chapterService.updateChapterByUrl(chapterId, requestDTO);
         return ResponseEntity.ok(response);
@@ -118,7 +118,7 @@ public class ChapterController {
     @Operation(summary = "[관리자] 챕터 삭제", description = "챕터와 연관된 파일 및 데이터를 영구 삭제.")
     @DeleteMapping("/{chapterId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteChapter(@PathVariable Long chapterId) {
+    public ResponseEntity<Void> deleteChapter(@PathVariable("chapterId") Long chapterId) {
         chapterService.deleteChapter(chapterId);
         return ResponseEntity.noContent().build();
     }
@@ -126,7 +126,7 @@ public class ChapterController {
     @Operation(summary = "[Local] [사용자/관리자용] 챕터 조회 (테스트용)", description = "챕터의 상세 정보와 함께 파일에 저장된 본문 내용(JSON)을 반환.")
     @GetMapping("/{chapterId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<ChapterResponseDTO> getChapter(@PathVariable Long chapterId) {
+    public ResponseEntity<ChapterResponseDTO> getChapter(@PathVariable("chapterId") Long chapterId) {
         ChapterResponseDTO response = chapterService.getChapter(chapterId);
         return ResponseEntity.ok(response);
     }
@@ -134,8 +134,21 @@ public class ChapterController {
     @Operation(summary = "[사용자/관리자용] 챕터 URL 조회(실제 서비스용)", description = "챕터의 상세 정보와 함께 저장된 파일/URL 경로만 반환 (본문 내용 로딩 안 함).")
     @GetMapping("/{chapterId}/url")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<ChapterResponseDTO> getChapterUrl(@PathVariable Long chapterId) {
+    public ResponseEntity<ChapterResponseDTO> getChapterUrl(@PathVariable("chapterId") Long chapterId) {
         ChapterResponseDTO response = chapterService.getChapterUrl(chapterId);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "[관리자] 모든 챕터 조회", description = "등록된 모든 챕터 목록을 반환합니다.")
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<java.util.List<ChapterResponseDTO>> getAllChapters() {
+        return ResponseEntity.ok(chapterService.getAllChapters());
+    }
+
+    @Operation(summary = "[누구나] 책 ID로 챕터 목록 조회", description = "특정 책에 포함된 챕터 목록을 순서대로 반환합니다.")
+    @GetMapping("/book/{bookId}")
+    public ResponseEntity<java.util.List<ChapterResponseDTO>> getChaptersByBookId(@PathVariable("bookId") Long bookId) {
+        return ResponseEntity.ok(chapterService.getChaptersByBookId(bookId));
     }
 }

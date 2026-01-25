@@ -21,6 +21,7 @@ public class WebClientConfig {
      * AI 서버용 WebClient 빈
      */
     @Bean
+    @org.springframework.context.annotation.Primary
     public WebClient aiWebClient() {
         return WebClient.builder()
                 .baseUrl(aiServerUrl)

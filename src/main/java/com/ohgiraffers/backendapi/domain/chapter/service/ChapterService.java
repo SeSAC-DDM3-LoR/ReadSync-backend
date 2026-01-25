@@ -292,6 +292,20 @@ public class ChapterService {
         chapterRepository.delete(chapter);
     }
 
+    /* [5] [관리자] 모든 챕터 조회 */
+    public java.util.List<ChapterResponseDTO> getAllChapters() {
+        return chapterRepository.findAll().stream()
+                .map(chapter -> convertToResponseDTO(chapter, false))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /* [6] [공통] 책 ID로 챕터 목록 조회 */
+    public java.util.List<ChapterResponseDTO> getChaptersByBookId(Long bookId) {
+        return chapterRepository.findByBook_BookIdOrderBySequenceAsc(bookId).stream()
+                .map(chapter -> convertToResponseDTO(chapter, false))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     /* ------------- 내부 헬퍼 메서드 ------------- */
 
     // 파일 로컬 저장 로직 (추후 AWS S3 Service로 대체될 부분)
