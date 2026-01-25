@@ -22,7 +22,9 @@ public class UserRequest {
         @NotBlank(message = "소셜 ID는 필수항목입니다.")
         private String providerId;
 
+        @Schema(hidden = true)
         private String nickname;
+        @Schema(hidden = true)
         private String profileImage;
 
         public User toUserEntity() {

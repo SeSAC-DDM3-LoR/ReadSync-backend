@@ -130,14 +130,23 @@ CREATE TABLE "likes" (
 );
 
 -- 7. Credits
+DROP TABLE IF EXISTS "credits" CASCADE;
 CREATE TABLE "credits" (
-    "credits_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-    "credits" INT NOT NULL,
-    "created_at" TIMESTAMP NOT NULL,
-    "deleted_at" TIMESTAMP NULL,
-    "credit_type" BIGINT NOT NULL,
-    "status" VARCHAR(20) NOT NULL,
-    CONSTRAINT "PK_CREDITS" PRIMARY KEY ("credits_id")
+                           "credits_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+
+                           "user_id" BIGINT NOT NULL,
+                           "credit_type_id" BIGINT NOT NULL,
+
+                           "amount" INT NOT NULL,
+                           "status" VARCHAR(20) DEFAULT 'ACTIVE' NOT NULL,
+
+    -- [Time Stamp]
+                           "created_at" TIMESTAMP DEFAULT now() NOT NULL,
+                           "expired_at" TIMESTAMP NOT NULL,
+                           "used_at" TIMESTAMP NULL,
+                           "deleted_at" TIMESTAMP NULL,
+
+                           CONSTRAINT "PK_CREDITS" PRIMARY KEY ("credits_id")
 );
 
 -- 8. Inquiries
@@ -468,12 +477,12 @@ CREATE TABLE "payment_history" (
 );
 
 -- 32. Credit Type
+DROP TABLE IF EXISTS "credit_type" CASCADE;
 CREATE TABLE "credit_type" (
-    "credit_type" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-    "base_expiry_days" INT NULL,
-    "credit_name" VARCHAR(20) NOT NULL,
-    "user_id" BIGINT NOT NULL,
-    CONSTRAINT "PK_CREDIT_TYPE" PRIMARY KEY ("credit_type")
+                               "credit_type_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL, -- Entity: credit_type_id
+                               "credit_name" VARCHAR(20) NOT NULL,
+                               "base_expiry_days" INT DEFAULT 365 NOT NULL,
+                               CONSTRAINT "PK_CREDIT_TYPE" PRIMARY KEY ("credit_type_id")
 );
 
 -- 33. Community Comments
@@ -587,7 +596,6 @@ ALTER TABLE "books" ADD CONSTRAINT "FK_categories_TO_books_1" FOREIGN KEY ("cate
 ALTER TABLE "likes" ADD CONSTRAINT "FK_comments_TO_likes_1" FOREIGN KEY ("comment_id") REFERENCES "comments" ("comment_id");
 ALTER TABLE "likes" ADD CONSTRAINT "FK_reviews_TO_likes_1" FOREIGN KEY ("review_id") REFERENCES "reviews" ("review_id");
 ALTER TABLE "likes" ADD CONSTRAINT "FK_users_TO_likes_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
-ALTER TABLE "credits" ADD CONSTRAINT "FK_credit_Type_TO_credits_1" FOREIGN KEY ("credit_type") REFERENCES "credit_type" ("credit_type");
 ALTER TABLE "inquiries" ADD CONSTRAINT "FK_users_TO_inquiries_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "friendships" ADD CONSTRAINT "FK_users_TO_friendships_1" FOREIGN KEY ("requester_id") REFERENCES "users" ("user_id");
 ALTER TABLE "friendships" ADD CONSTRAINT "FK_users_TO_friendships_2" FOREIGN KEY ("addressee_id") REFERENCES "users" ("user_id");
@@ -625,7 +633,6 @@ ALTER TABLE "book_logs" ADD CONSTRAINT "FK_Libraries_TO_book_logs_1" FOREIGN KEY
 ALTER TABLE "chapters" ADD CONSTRAINT "FK_books_TO_chapters_1" FOREIGN KEY ("book_id") REFERENCES "books" ("book_id");
 ALTER TABLE "blacklists" ADD CONSTRAINT "FK_users_TO_blacklists_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "payment_history" ADD CONSTRAINT "FK_orders_TO_payment_history_1" FOREIGN KEY ("order_id") REFERENCES "orders" ("order_id");
-ALTER TABLE "credit_type" ADD CONSTRAINT "FK_users_TO_credit_Type_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "community_comments" ADD CONSTRAINT "FK_users_TO_community_comments_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "community_comments" ADD CONSTRAINT "FK_community_comments_TO_community_comments_1" FOREIGN KEY ("parent_id") REFERENCES "community_comments" ("comment_id");
 ALTER TABLE "community_comments" ADD CONSTRAINT "FK_community_posts_TO_community_comments_1" FOREIGN KEY ("post_id") REFERENCES "community_posts" ("post_id");
@@ -651,3 +658,6 @@ ALTER TABLE "libraries" ADD CONSTRAINT "UQ_MY_BOOK" UNIQUE ("user_id", "book_id"
 ALTER TABLE "bookmarks" ADD CONSTRAINT "UQ_USER_BOOKMARK" UNIQUE ("library_id", "chapter_id");
 ALTER TABLE "exp_logs" ADD CONSTRAINT "UQ_USER_EXP_REWARD" UNIQUE ("user_id", "exp_rule_id", "reference_id");
 ALTER TABLE "book_logs" ADD CONSTRAINT "UQ_DAILY_READ" UNIQUE ("library_id", "read_date");
+ALTER TABLE "user_informations" ADD CONSTRAINT "UQ_NICKNAME_TAG" UNIQUE ("user_name", "tag");
+ALTER TABLE "credits" ADD CONSTRAINT "FK_users_TO_credits" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
+ALTER TABLE "credits" ADD CONSTRAINT "FK_credit_type_TO_credits" FOREIGN KEY ("credit_type_id") REFERENCES "credit_type" ("credit_type_id");

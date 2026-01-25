@@ -111,18 +111,19 @@ INSERT INTO "book_logs" ("read_paragraph", "read_time", "library_id") VALUES
                                                                           (0, 0, 2),
                                                                           (0, 0, 4);
 
--- [16] Credit Type (재화 유형 - User 참조)
-INSERT INTO "credit_type" ("base_expiry_days", "credit_name", "user_id") VALUES
-                                                                             (30, '이벤트 포인트', 1),
-                                                                             (365, '유료 크레딧', 1),
-                                                                             (90, '보상 포인트', 1);
+-- [16] Credit Type
+-- user_id 제거, 컬럼명 명확화
+INSERT INTO "credit_type" ("base_expiry_days", "credit_name") VALUES
+                                                                  (30, '이벤트 포인트'),  -- 1
+                                                                  (365, '유료 크레딧'),   -- 2
+                                                                  (90, '보상 포인트');    -- 3
 
--- [17] Credits (재화 이력 - Credit Type 참조)
-INSERT INTO "credits" ("credits", "created_at", "credit_type", "status") VALUES
-                                                                             (1000, now(), 1, 'ACTIVE'),
-                                                                             (5000, now(), 2, 'ACTIVE'),
-                                                                             (500, now(), 1, 'ACTIVE');
-
+-- [17] Credits
+-- user_id 추가, expired_at 추가, credits -> amount 변경
+INSERT INTO "credits" ("user_id", "credit_type_id", "amount", "status", "created_at", "expired_at") VALUES
+                                                                                                        (2, 1, 1000, 'ACTIVE', now(), now() + interval '30 days'),
+                                                                                                        (2, 2, 5000, 'ACTIVE', now(), now() + interval '365 days'),
+                                                                                                        (3, 1, 500, 'ACTIVE', now(), now() + interval '30 days');
 -- [18] Payment Methods (결제 수단 - User 참조)
 INSERT INTO "payment_methods" ("user_id", "billing_key", "pg_provider", "card_company", "card_last_4", "created_at") VALUES
                                                                                                                          (2, 'bill_key_user2', 'TOSS', 'SHINHAN', '1234', now()),

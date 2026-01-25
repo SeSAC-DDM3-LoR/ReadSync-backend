@@ -183,6 +183,23 @@ public class UserService {
         return UserResponse.UserDetail.from(user, userInfo);
     }
 
+    //닉네임 + 태그로 특정 유저 찾기
+    @Transactional(readOnly = true)
+    public UserResponse.OtherProfile findUserByTag(String nickname, String tag) {
+
+        // 1. 정보 조회
+        UserInformation info = userInformationRepository.findByNicknameAndTag(nickname, tag)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 탈퇴한 유저인지 확인
+        if (info.getUser().getStatus() == UserStatus.WITHDRAWN) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 3. 응답 변환
+        return UserResponse.OtherProfile.from(info);
+    }
+
     // 태그 생성기 (중복 체크 포함)
     private String generateUniqueTag(String nickname) {
         String tag;

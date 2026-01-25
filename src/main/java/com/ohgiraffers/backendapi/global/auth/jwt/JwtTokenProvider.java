@@ -7,11 +7,11 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken; // [수정] import 추가
-import org.springframework.security.core.Authentication; // [수정] Tomcat -> Spring Security로 변경
-import org.springframework.security.core.authority.SimpleGrantedAuthority; // [수정] import 추가
-import org.springframework.security.core.userdetails.User; // [수정] Spring Security User 사용
-import org.springframework.security.core.userdetails.UserDetails; // [수정] import 추가
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -80,7 +80,6 @@ public class JwtTokenProvider {
 
     /**
      * 토큰에서 인증 정보(Authentication) 조회
-     * (SecurityContext에 저장할 객체 생성)
      */
     public Authentication getAuthentication(String accessToken) {
         // 토큰 복호화
@@ -99,7 +98,6 @@ public class JwtTokenProvider {
 
     /**
      * 토큰 유효성 검증
-     * (중복된 메서드를 하나로 통합했습니다)
      */
     public boolean validateToken(String token) {
         try {
@@ -117,7 +115,7 @@ public class JwtTokenProvider {
         return false;
     }
 
-    // 내부 클레임 파싱 메서드 (중복 제거 및 통합)
+    // 내부 클레임 파싱 메서드
     private Claims parseClaims(String token) {
         try {
             return Jwts.parser()
@@ -126,7 +124,7 @@ public class JwtTokenProvider {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (ExpiredJwtException e) {
-            // 만료된 토큰이어도 클레임은 반환 (필요 시)
+            // 만료된 토큰이어도 클레임은 반환 (정보 추출용)
             return e.getClaims();
         }
     }

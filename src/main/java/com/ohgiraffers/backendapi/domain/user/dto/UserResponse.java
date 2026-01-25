@@ -102,6 +102,15 @@ public class UserResponse {
         private String nickname;
         private String tag;
         private String profileImage;
+
+        public static OtherProfile from(UserInformation info) {
+            return OtherProfile.builder()
+                    .userId(info.getUser().getId()) // User 객체에서 ID 꺼내기
+                    .nickname(info.getNickname())
+                    .tag(info.getTag())
+                    .profileImage(info.getProfileImage())
+                    .build();
+        }
     }
 
     // 어드민이 유저 조회 (리스트)

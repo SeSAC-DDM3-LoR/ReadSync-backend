@@ -58,13 +58,20 @@ public class AuthService {
         User user = request.toUserEntity();
         userRepository.save(user);
 
-        String tag = generateUniqueTag(request.getNickname());
+        String finalNickname = request.getNickname();
+        if (finalNickname == null || finalNickname.isBlank()) {
+            finalNickname = "게스트_" + String.format("%04d", new Random().nextInt(10000));
+        }
+
+        String finalProfileImage = request.getProfileImage();
+
+        String tag = generateUniqueTag(finalNickname);
 
         UserInformation userInfo = UserInformation.builder()
                 .user(user)
-                .nickname(request.getNickname())
+                .nickname(finalNickname)
                 .tag(tag)
-                .profileImage(request.getProfileImage())
+                .profileImage(finalProfileImage)
                 .experience(0)
                 .levelId(1L)
                 .preferredGenre("General")

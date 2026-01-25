@@ -13,4 +13,6 @@ public interface UserInformationRepository extends JpaRepository<UserInformation
     Optional<UserInformation> findByUserId(Long userId);
 
     boolean existsByNicknameAndTag(String nickname, String tag);
+
+    Optional<UserInformation> findByNicknameAndTag(String nickname, String tag);
 }
