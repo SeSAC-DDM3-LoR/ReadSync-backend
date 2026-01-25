@@ -19,7 +19,7 @@ import java.util.List;
  * 장바구니 관련 API를 제공하는 컨트롤러 클래스입니다.
  */
 @RestController
-@RequestMapping("/api/v1/carts")
+@RequestMapping("/v1/carts")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 @Tag(name = "Cart (장바구니)", description = "장바구니 담기, 조회, 수정, 삭제 API")
@@ -27,7 +27,7 @@ public class CartController {
 
     private final CartService cartService;
 
-    @Operation(summary = "장바구니 담기", description = "도서를 장바구니에 추가합니다.")
+    @Operation(summary = "[사용자/관리자] 장바구니 담기", description = "도서를 장바구니에 추가합니다.")
     @PostMapping
     public ResponseEntity<CartResponse> addToCart(
             @CurrentUserId Long userId,
@@ -36,7 +36,7 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "장바구니 목록 조회", description = "현재 로그인한 사용자의 장바구니 목록을 조회합니다.")
+    @Operation(summary = "[사용자/관리자] 장바구니 목록 조회", description = "현재 로그인한 사용자의 장바구니 목록을 조회합니다.")
     @GetMapping
     public ResponseEntity<List<CartResponse>> getCartList(
             @CurrentUserId Long userId) {
@@ -44,7 +44,7 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "장바구니 수량 수정", description = "장바구니에 담긴 도서의 수량을 수정합니다.")
+    @Operation(summary = "[사용자/관리자] 장바구니 수량 수정", description = "장바구니에 담긴 도서의 수량을 수정합니다.")
     @PatchMapping("/{cartId}")
     public ResponseEntity<CartResponse> updateCartItem(
             @CurrentUserId Long userId,
@@ -54,7 +54,7 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "장바구니 항목 삭제", description = "장바구니에서 특정 항목을 삭제합니다.")
+    @Operation(summary = "[사용자/관리자] 장바구니 항목 삭제", description = "장바구니에서 특정 항목을 삭제합니다.")
     @DeleteMapping("/{cartId}")
     public ResponseEntity<Void> deleteCartItem(
             @CurrentUserId Long userId,
