@@ -21,7 +21,7 @@ public class ChapterController {
 
     private final ChapterService chapterService;
 
-    @Operation(summary = "[Local] [관리자] 챕터 등록 (파일 업로드)", description = "JSON 파일을 로컬 서버에 업로드하여 챕터를 생성. 메타데이터 미입력 시 파일에서 자동 추출.")
+    @Operation(summary = "[Local] [관리자] 챕터 등록 (파일 업로드/테스트용)", description = "JSON 파일을 로컬 서버에 업로드하여 챕터를 생성. 메타데이터 미입력 시 파일에서 자동 추출.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> createChapter(
@@ -68,7 +68,7 @@ public class ChapterController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "[Local] [관리자] 챕터 수정 (파일 업로드)", description = "챕터의 파일(로컬) 또는 메타데이터를 수정. 파일 변경 시 'isEmbedded' 상태가 초기화됨.")
+    @Operation(summary = "[Local] [관리자] 챕터 수정 (파일 업로드/테스트용)", description = "챕터의 파일(로컬) 또는 메타데이터를 수정. 파일 변경 시 'isEmbedded' 상태가 초기화됨.")
     @PutMapping(value = "/{chapterId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChapterResponseDTO> updateChapter(

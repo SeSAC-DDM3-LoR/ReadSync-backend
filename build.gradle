@@ -79,7 +79,7 @@ dependencies {
     // halfvec 의존성 - 김정우 추가
     implementation 'org.hibernate.orm:hibernate-vector:6.6.0.Final'
 
-    // AWS S3
+    // AWS S3 - 김선준 추가(버전은 적절한 버전으로 자유롭게 변경하세요.)
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.2.1'
 }
 

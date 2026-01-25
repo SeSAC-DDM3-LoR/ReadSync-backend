@@ -100,7 +100,13 @@ public class ChapterService {
         return convertToResponseDTO(savedChapter, false);
     }
 
-    /* [1-2] [AWS] 챕터 생성 (S3 파일 업로드) */
+    /**
+     * [AWS] 챕터 생성 (S3 파일 업로드)
+     * 파일을 AWS S3에 업로드하고 챕터 정보를 DB에 저장합니다.
+     *
+     * @param requestDTO 챕터 생성 요청 데이터 (파일 포함)
+     * @return 생성된 챕터 응답 DTO
+     */
     @Transactional
     public ChapterResponseDTO createChapterS3(ChapterRequestDTO requestDTO) {
         // 1. 책 존재 여부 확인
@@ -173,7 +179,14 @@ public class ChapterService {
         return convertToResponseDTO(chapter, true);
     }
 
-    /* [2-2] 챕터 URL 조회 (내용 미포함, URL만 반환) */
+    /**
+     * 챕터 URL 조회
+     * 
+     * 파일 내용을 읽지 않고 저장된 경로(URL)만 포함하여 반환합니다.
+     *
+     * @param chapterId 조회할 챕터 ID
+     * @return 챕터 응답 DTO (content=null)
+     */
     public ChapterResponseDTO getChapterUrl(Long chapterId) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
@@ -209,7 +222,15 @@ public class ChapterService {
         return convertToResponseDTO(chapterRepository.save(chapter), false);
     }
 
-    /* [3-2] [AWS] 챕터 수정 (S3 파일 업로드) */
+    /**
+     * [AWS] 챕터 수정 (S3 파일 업로드)
+     * 
+     * 기존 파일을 S3에서 삭제하고 새 파일을 업로드하여 챕터 정보를 수정합니다.
+     *
+     * @param chapterId  수정할 챕터 ID
+     * @param requestDTO 수정할 요청 데이터 (파일 포함)
+     * @return 수정된 챕터 응답 DTO
+     */
     @Transactional
     public ChapterResponseDTO updateChapterS3(Long chapterId, ChapterRequestDTO requestDTO) {
         Chapter chapter = chapterRepository.findById(chapterId)
