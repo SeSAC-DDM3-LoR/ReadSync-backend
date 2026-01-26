@@ -9,6 +9,7 @@ import com.ohgiraffers.backendapi.domain.chapter.dto.ChapterResponseDTO;
 import com.ohgiraffers.backendapi.domain.chapter.dto.ChapterUrlRequestDTO;
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
+import com.ohgiraffers.backendapi.global.common.S3Service;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +36,12 @@ public class ChapterService {
     private final BookRepository bookRepository;
     private final ObjectMapper objectMapper; // JSON 파싱용
 
+    private final S3Service s3Service;
+
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    /* [1] 챕터 생성 (파일 업로드 + 메타데이터 추출) */
+    /* [1] [Local] 챕터 생성 (파일 업로드 + 메타데이터 추출) */
 
     @Transactional
     public ChapterResponseDTO createChapter(ChapterRequestDTO requestDTO) {
@@ -97,7 +100,43 @@ public class ChapterService {
         return convertToResponseDTO(savedChapter, false);
     }
 
-    /* [1-2] 챕터 생성 (URL 기반) */
+    /**
+     * [AWS] 챕터 생성 (S3 파일 업로드)
+     * 파일을 AWS S3에 업로드하고 챕터 정보를 DB에 저장합니다.
+     *
+     * @param requestDTO 챕터 생성 요청 데이터 (파일 포함)
+     * @return 생성된 챕터 응답 DTO
+     */
+    @Transactional
+    public ChapterResponseDTO createChapterS3(ChapterRequestDTO requestDTO) {
+        // 1. 책 존재 여부 확인
+        Book book = bookRepository.findById(requestDTO.getBookId())
+                .orElseThrow(() -> new CustomException(ErrorCode.BOOK_NOT_FOUND));
+
+        // 2. S3 파일 저장
+        String s3Url = s3Service.uploadFile(requestDTO.getFile());
+
+        // 3. 메타데이터 결정 (S3 방식은 파일 내용을 읽지 않고 입력받은 값 위주로 처리)
+        // 만약 파일 내용을 읽어야 한다면, MultiPartFile 자체에서 InputStream으로 읽어서 처리 가능
+        Integer finalSequence = requestDTO.getSequence() != null ? requestDTO.getSequence() : 1;
+        String finalChapterName = requestDTO.getChapterName() != null ? requestDTO.getChapterName()
+                : "Untitled Chapter";
+
+        // 4. 엔티티 생성 및 저장
+        Chapter chapter = Chapter.builder()
+                .book(book)
+                .chapterName(finalChapterName)
+                .sequence(finalSequence)
+                .bookContentPath(s3Url) // S3 URL 저장
+                .isEmbedded(false)
+                .build();
+
+        Chapter savedChapter = chapterRepository.save(chapter);
+
+        return convertToResponseDTO(savedChapter, false);
+    }
+
+    /* [1-3] 챕터 생성 (URL 기반) */
     @Transactional
     public ChapterResponseDTO createChapterByUrl(ChapterUrlRequestDTO requestDTO) {
         // 1. 책 존재 여부 확인
@@ -140,7 +179,23 @@ public class ChapterService {
         return convertToResponseDTO(chapter, true);
     }
 
-    /* [3] 챕터 수정 (파일 변경 시 is_embedded -> false) */
+    /**
+     * 챕터 URL 조회
+     * 
+     * 파일 내용을 읽지 않고 저장된 경로(URL)만 포함하여 반환합니다.
+     *
+     * @param chapterId 조회할 챕터 ID
+     * @return 챕터 응답 DTO (content=null)
+     */
+    public ChapterResponseDTO getChapterUrl(Long chapterId) {
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+
+        // 내용을 포함하지 않고 DTO 반환 (bookContentPath만 제공)
+        return convertToResponseDTO(chapter, false);
+    }
+
+    /* [3] [Local] 챕터 수정 (파일 변경 시 is_embedded -> false) */
     @Transactional
     public ChapterResponseDTO updateChapter(Long chapterId, ChapterRequestDTO requestDTO) {
         Chapter chapter = chapterRepository.findById(chapterId)
@@ -167,7 +222,40 @@ public class ChapterService {
         return convertToResponseDTO(chapterRepository.save(chapter), false);
     }
 
-    /* [3-2] 챕터 수정 (URL 기반) */
+    /**
+     * [AWS] 챕터 수정 (S3 파일 업로드)
+     * 
+     * 기존 파일을 S3에서 삭제하고 새 파일을 업로드하여 챕터 정보를 수정합니다.
+     *
+     * @param chapterId  수정할 챕터 ID
+     * @param requestDTO 수정할 요청 데이터 (파일 포함)
+     * @return 수정된 챕터 응답 DTO
+     */
+    @Transactional
+    public ChapterResponseDTO updateChapterS3(Long chapterId, ChapterRequestDTO requestDTO) {
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+
+        // 1. 파일이 수정된 경우 처리
+        if (requestDTO.getFile() != null && !requestDTO.getFile().isEmpty()) {
+            // 기존 파일이 S3 파일인지 확인은 어렵지만, 일단 URL 형태라면 삭제 시도
+            // (주의: 기존에 로컬 파일이었다면 S3 삭제 로직이 실패할 수도 있으나 예외처리 되어있음)
+            s3Service.deleteFile(chapter.getBookContentPath());
+
+            // 새 파일 저장
+            String s3Url = s3Service.uploadFile(requestDTO.getFile());
+
+            // 엔티티 업데이트
+            chapter.updateFile(s3Url);
+        }
+
+        // 2. 메타데이터 수정
+        chapter.updateMetadata(requestDTO.getChapterName(), requestDTO.getSequence());
+
+        return convertToResponseDTO(chapterRepository.save(chapter), false);
+    }
+
+    /* [3-3] 챕터 수정 (URL 기반) */
     @Transactional
     public ChapterResponseDTO updateChapterByUrl(Long chapterId, ChapterUrlRequestDTO requestDTO) {
         Chapter chapter = chapterRepository.findById(chapterId)
@@ -194,11 +282,28 @@ public class ChapterService {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
 
-        // 1. 로컬 파일 삭제
+        // 1. 로컬 파일 삭제 (경로가 로컬 경로일 때만 동작하도록 되어 있음)
         deleteLocalFile(chapter.getBookContentPath());
 
-        // 2. DB 데이터 삭제
+        // 2. S3 파일 삭제 시도 (경로가 S3 URL일 때 동작)
+        s3Service.deleteFile(chapter.getBookContentPath());
+
+        // 3. DB 데이터 삭제
         chapterRepository.delete(chapter);
+    }
+
+    /* [5] [관리자] 모든 챕터 조회 */
+    public java.util.List<ChapterResponseDTO> getAllChapters() {
+        return chapterRepository.findAll().stream()
+                .map(chapter -> convertToResponseDTO(chapter, false))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /* [6] [공통] 책 ID로 챕터 목록 조회 */
+    public java.util.List<ChapterResponseDTO> getChaptersByBookId(Long bookId) {
+        return chapterRepository.findByBook_BookIdOrderBySequenceAsc(bookId).stream()
+                .map(chapter -> convertToResponseDTO(chapter, false))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /* ------------- 내부 헬퍼 메서드 ------------- */
@@ -244,6 +349,13 @@ public class ChapterService {
 
     // 저장된 파일 경로에서 JSON Node 읽기
     private JsonNode readFileToJsonNode(String filePath) {
+        // HTTP URL인 경우 (S3 등)
+        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+            // TODO: 필요 시 WebClient나 URLConnection으로 외부 파일 내용을 읽어오는 로직 추가 가능
+            // 현재는 "내용을 로컬에서 읽을 수 없음"으로 처리
+            throw new CustomException(ErrorCode.FILE_NOT_FOUND, "외부 URL 컨텐츠는 직접 다운로드해주세요.");
+        }
+
         try {
             Path path = Paths.get(filePath);
             if (!Files.exists(path)) {
@@ -264,7 +376,7 @@ public class ChapterService {
                 content = readFileToJsonNode(chapter.getBookContentPath());
             } catch (CustomException e) {
                 log.error("컨텐츠 로드 실패: {}", e.getMessage());
-                content = "Error: 내용을 불러올 수 없습니다.";
+                content = "Error: 내용을 불러올 수 없습니다. (URL 기반이거나 파일 없음)";
             }
         }
         return ChapterResponseDTO.builder()
@@ -280,7 +392,7 @@ public class ChapterService {
 
     // LocalFile 삭제 메서드
     private void deleteLocalFile(String filePath) {
-        if (filePath != null && !filePath.isEmpty()) {
+        if (filePath != null && !filePath.isEmpty() && !filePath.startsWith("http")) { // URL은 로컬 파일이 아님
             try {
                 Files.deleteIfExists(Paths.get(filePath));
             } catch (IOException e) {

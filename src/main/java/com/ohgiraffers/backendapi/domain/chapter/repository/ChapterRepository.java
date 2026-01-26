@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ChapterRepository extends JpaRepository<Chapter, Long> {
+    java.util.List<Chapter> findByBook_BookIdOrderBySequenceAsc(Long bookId);
 }
