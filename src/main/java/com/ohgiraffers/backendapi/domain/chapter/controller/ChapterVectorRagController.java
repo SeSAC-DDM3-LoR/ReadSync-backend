@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Chapter RAG Embedding", description = "챕터 RAG 임베딩 관리 API")
 @RestController
-@RequestMapping("/api/v1/chapters")
+@RequestMapping("/v1/chapters")
 @RequiredArgsConstructor
 public class ChapterVectorRagController {
 
