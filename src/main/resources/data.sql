@@ -8,7 +8,8 @@ TRUNCATE TABLE
     "community_posts", "categories", "book_logs", "chapters", "blacklists",
     "payment_history", "credit_type", "community_comments", "chat_logs",
     "book_ai_chat_rooms", "room_invitations", "payment_methods", "refresh_tokens",
-    "user_vectors", "book_vectors", "chapter_vectors"
+    "user_vectors", "book_vectors", "chapter_vectors",
+    "subscription_plans"
     RESTART IDENTITY CASCADE;
 
 -- [1] Levels (기초 레벨 정보)
@@ -121,7 +122,8 @@ INSERT INTO "book_logs" ("read_paragraph", "read_time", "library_id") VALUES
 INSERT INTO "credit_type" ("base_expiry_days", "credit_name") VALUES
                                                                   (30, '이벤트 포인트'),  -- 1
                                                                   (365, '유료 크레딧'),   -- 2
-                                                                  (90, '보상 포인트');    -- 3
+                                                                  (90, '보상 포인트'),    -- 3
+                                                                  (365, '구독 혜택');     -- 4
 
 -- [17] Credits
 -- user_id 추가, expired_at 추가, credits -> amount 변경
@@ -135,11 +137,18 @@ INSERT INTO "payment_methods" ("user_id", "billing_key", "pg_provider", "card_co
                                                                                                                          (3, 'bill_key_user3', 'KAKAO', 'KOOKMIN', '5678', now()),
                                                                                                                          (4, 'bill_key_user4', 'NAVER', 'HYUNDAI', '9012', now());
 
--- [19] Subscriptions (구독 정보 - User 참조)
-INSERT INTO "subscriptions" ("plan_name", "price", "status", "next_billing_date", "user_id") VALUES
-                                                                                                 ('프리미엄 독서', 9900, 'ACTIVE', now() + interval '1 month', 2),
-                                                                                                 ('베이직 요금제', 5900, 'EXPIRED', now() - interval '1 day', 3),
-                                                                                                 ('프리미엄 독서', 9900, 'ACTIVE', now() + interval '15 days', 4);
+-- [19] Subscription Plans (구독 플랜 정보)
+INSERT INTO "subscription_plans" ("plan_name", "price", "description", "give_credit", "is_active") VALUES
+('베이직', 5900, '기본적인 독서 기능을 제공합니다.', 1000, TRUE),    -- 1
+('프리미엄', 9900, '모든 독서 기능과 추가 혜택을 제공합니다.', 2200, TRUE), -- 2
+('패밀리', 14900, '가족과 함께 즐기는 독서 라이프.', 3400, TRUE);      -- 3
+
+-- [19-1] Subscriptions (구독 정보 - User, Plan 참조)
+-- started_at 추가됨
+INSERT INTO "subscriptions" ("plan_id", "status", "next_billing_date", "user_id", "started_at") VALUES
+(2, 'ACTIVE', now() + interval '1 month', 2, now()),  -- 프리미엄
+(1, 'EXPIRED', now() - interval '1 day', 3, now() - interval '1 month'),   -- 베이직
+(3, 'ACTIVE', now() + interval '15 days', 4, now() - interval '15 days');  -- 패밀리
 
 -- [20] Carts (장바구니 - User, Book 참조)
 INSERT INTO "carts" ("user_id", "book_id", "quantity") VALUES

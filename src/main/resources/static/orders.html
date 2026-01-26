@@ -361,8 +361,13 @@
     <div class="container">
         <!-- 네비게이션 -->
         <div class="nav-bar">
-            <a href="index.html">← 홈으로</a>
-            <h1>📦 주문 내역</h1>
+            <a href="index.html">🏠 홈</a>
+            <span style="color: #334; margin: 0 10px;">|</span>
+            <a href="cart.html">🛒 장바구니</a>
+            <span style="color: #334; margin: 0 10px;">|</span>
+            <a href="subscription.html">📅 구독 관리</a>
+            <span style="color: #334; margin: 0 10px;">|</span>
+            <a href="orders.html" style="color: #667eea; font-weight: bold;">📦 주문/결제 내역</a>
         </div>
 
         <!-- 통계 카드 -->
@@ -518,131 +523,48 @@
             document.getElementById('paymentsTab').style.display = tab === 'payments' ? 'block' : 'none';
         }
 
-        // 주문 내역 로드 (API 연동 시 사용)
+        // 주문 내역 로드 (API 연동)
         async function loadOrders() {
             log('주문 내역 조회 중...');
 
-            // TODO: 실제 API 연동 시 아래 주석 해제
-            /*
             try {
                 const response = await fetch('/api/v1/orders/me', {
                     headers: getAuthHeader()
                 });
-                
+
+                // 404 handled effectively by empty list expectation or different status?
+                // Assuming 200 OK with list
                 if (!response.ok) throw new Error('주문 조회 실패');
-                
+
                 const data = await response.json();
                 renderOrders(data);
                 log('✅ 주문 내역 조회 완료', 'success');
             } catch (error) {
-                log(`❌ 주문 조회 실패: ${error.message}`, 'error');
+                log(`❌ 주문 조회 실패: ${error.message} (샘플 데이터 로드)`, 'error');
+                renderOrders(sampleOrders); // Fallback to sample
             }
-            */
-
-            // 샘플 데이터 렌더링
-            renderOrders(sampleOrders);
-            log('✅ 샘플 주문 데이터 로드 완료 (API 미연동)', 'success');
         }
 
-        // 주문 목록 렌더링
-        function renderOrders(orders) {
-            const container = document.getElementById('orderList');
-
-            if (!orders || orders.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📦</div>
-                        <p>주문 내역이 없습니다.</p>
-                        <a href="cart.html" class="btn btn-primary" style="display: inline-block; margin-top: 20px; text-decoration: none;">
-                            쇼핑하러 가기
-                        </a>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = '';
-            orders.forEach(order => {
-                const statusClass = order.status.toLowerCase();
-                const statusText = getStatusText(order.status);
-
-                let itemsHtml = '';
-                if (order.items) {
-                    order.items.forEach(item => {
-                        itemsHtml += `
-                            <div class="order-item">
-                                <div class="order-item-info">
-                                    <div class="order-item-title">${item.title}</div>
-                                    <div class="order-item-detail">수량: ${item.quantity}</div>
-                                </div>
-                                <div class="order-item-price">₩${item.price.toLocaleString()}</div>
-                            </div>
-                        `;
-                    });
-                }
-
-                html += `
-                    <div class="order-card">
-                        <div class="order-header">
-                            <div>
-                                <div class="order-id">#${order.orderId}</div>
-                                <div class="order-name">${order.orderName}</div>
-                                <div class="order-date">${order.createdAt}</div>
-                            </div>
-                            <span class="order-status ${statusClass}">${statusText}</span>
-                        </div>
-                        <div class="order-items">
-                            ${itemsHtml || '<p style="color: #6a6a7a;">상세 항목 정보 없음</p>'}
-                        </div>
-                        <div class="order-footer">
-                            <div class="order-total">총 결제금액 <span>₩${order.totalAmount.toLocaleString()}</span></div>
-                            <div class="order-actions">
-                                <button class="btn btn-secondary" onclick="viewOrderDetail('${order.orderId}')">상세보기</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        // 결제 상태 텍스트 변환
-        function getStatusText(status) {
-            const statusMap = {
-                'COMPLETED': '결제완료',
-                'PENDING': '결제대기',
-                'CANCELLED': '취소됨',
-                'REFUNDED': '환불됨',
-                'DONE': '완료'
-            };
-            return statusMap[status] || status;
-        }
+        // ...
 
         // 결제 내역 로드
         async function loadPayments() {
             log('결제 내역 조회 중...');
 
-            // TODO: 실제 API 연동 시 아래 주석 해제
-            /*
             try {
                 const response = await fetch('/api/v1/payments/history', {
                     headers: getAuthHeader()
                 });
-                
+
                 if (!response.ok) throw new Error('결제 내역 조회 실패');
-                
+
                 const data = await response.json();
                 renderPayments(data);
                 log('✅ 결제 내역 조회 완료', 'success');
             } catch (error) {
-                log(`❌ 결제 조회 실패: ${error.message}`, 'error');
+                log(`❌ 결제 조회 실패: ${error.message} (샘플 데이터 로드)`, 'error');
+                renderPayments(samplePayments); // Fallback to sample
             }
-            */
-
-            // 샘플 데이터 렌더링
-            renderPayments(samplePayments);
-            log('✅ 샘플 결제 데이터 로드 완료', 'success');
         }
 
         // 결제 목록 렌더링

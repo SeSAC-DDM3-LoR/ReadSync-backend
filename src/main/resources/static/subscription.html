@@ -360,8 +360,13 @@
     <div class="container">
         <!-- 네비게이션 -->
         <div class="nav-bar">
-            <a href="index.html">← 홈으로</a>
-            <h1>📅 정기 구독</h1>
+            <a href="index.html">🏠 홈</a>
+            <span style="color: #334; margin: 0 10px;">|</span>
+            <a href="cart.html">🛒 장바구니</a>
+            <span style="color: #334; margin: 0 10px;">|</span>
+            <a href="subscription.html" style="color: #667eea; font-weight: bold;">📅 구독 관리</a>
+            <span style="color: #334; margin: 0 10px;">|</span>
+            <a href="orders.html">📦 주문/결제 내역</a>
         </div>
 
         <!-- 단계 표시 -->
@@ -398,10 +403,10 @@
         <div class="section" id="planSection">
             <h2>📋 구독 플랜 선택</h2>
             <div class="plans-grid">
-                <div class="plan-card" data-plan="basic" data-price="4900">
+                <div class="plan-card" data-id="1" data-plan="basic" data-price="5900">
                     <div class="plan-icon">📚</div>
                     <div class="plan-name">Basic</div>
-                    <div class="plan-price">₩4,900</div>
+                    <div class="plan-price">₩5,900</div>
                     <div class="plan-period">/ 월</div>
                     <ul class="plan-features">
                         <li>월 5권 무료 열람</li>
@@ -410,7 +415,7 @@
                     </ul>
                 </div>
 
-                <div class="plan-card popular" data-plan="premium" data-price="9900">
+                <div class="plan-card popular" data-id="2" data-plan="premium" data-price="9900">
                     <div class="plan-icon">⭐</div>
                     <div class="plan-name">Premium</div>
                     <div class="plan-price">₩9,900</div>
@@ -423,7 +428,7 @@
                     </ul>
                 </div>
 
-                <div class="plan-card" data-plan="family" data-price="14900">
+                <div class="plan-card" data-id="3" data-plan="family" data-price="14900">
                     <div class="plan-icon">👨‍👩‍👧‍👦</div>
                     <div class="plan-name">Family</div>
                     <div class="plan-price">₩14,900</div>
@@ -476,6 +481,7 @@
     <script>
         // 전역 변수
         const API_BASE = '/api/v1';
+        let selectedPlanId = 0;
         let selectedPlanName = '';
         let selectedPlanPrice = 0;
 
@@ -530,6 +536,7 @@
                     cards.forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
 
+                    selectedPlanId = card.dataset.id;
                     selectedPlanName = card.dataset.plan;
                     selectedPlanPrice = parseInt(card.dataset.price);
 
@@ -635,7 +642,7 @@
 
         // 구독 시작
         async function subscribe() {
-            if (!selectedPlanName || !selectedPlanPrice) {
+            if (!selectedPlanId) {
                 alert('구독할 플랜을 선택해주세요.');
                 return;
             }
@@ -649,7 +656,7 @@
             log(`구독 시작 요청: ${selectedPlanName} (₩${selectedPlanPrice})`);
 
             try {
-                const response = await fetch(`${API_BASE}/subscriptions?planName=${encodeURIComponent(selectedPlanName)}&price=${selectedPlanPrice}`, {
+                const response = await fetch(`${API_BASE}/subscriptions?planId=${selectedPlanId}`, {
                     method: 'POST',
                     headers: getAuthHeader()
                 });

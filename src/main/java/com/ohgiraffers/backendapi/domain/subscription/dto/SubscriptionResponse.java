@@ -1,6 +1,7 @@
 package com.ohgiraffers.backendapi.domain.subscription.dto;
 
 import com.ohgiraffers.backendapi.domain.subscription.enums.SubscriptionStatus;
+import com.ohgiraffers.backendapi.domain.subscription.entity.Subscription;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -19,4 +20,15 @@ public class SubscriptionResponse {
     private SubscriptionStatus status;
     private LocalDateTime nextBillingDate;
     private LocalDateTime startedAt;
+
+    public static SubscriptionResponse from(Subscription subscription) {
+        return SubscriptionResponse.builder()
+                .subId(subscription.getSubId())
+                .planName(subscription.getPlan().getPlanName())
+                .price(subscription.getPlan().getPrice())
+                .status(subscription.getSubscriptionStatus())
+                .nextBillingDate(subscription.getNextBillingDate())
+                .startedAt(subscription.getStartedAt())
+                .build();
+    }
 }
