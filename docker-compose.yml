@@ -2,7 +2,9 @@ version: '3.8'
 services:
   app:
     # 1. 현재 폴더의 Dockerfile(자바 서버)을 빌드해서 실행해라!
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     # 2. 외부 80 포트로 들어오면 내부 8080(스프링)으로 연결해라!
     ports:
       - "80:8080"
