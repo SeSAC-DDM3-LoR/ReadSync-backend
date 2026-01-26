@@ -45,4 +45,10 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
                         "where f.requester.id = :blockerId and f.addressee.id = :blockedId " +
                         "and f.status = 'BLOCKED'")
         boolean isBlocked(@Param("blockerId") Long blockerId, @Param("blockedId") Long blockedId);
+
+        // 받은 친구 요청 조회
+        List<Friendship> findByAddresseeAndStatus(User addressee, FriendshipStatus status);
+
+        // 보낸 친구 요청 조회
+        List<Friendship> findByRequesterAndStatus(User requester, FriendshipStatus status);
 }

@@ -174,6 +174,22 @@ public class ReadingRoomService {
         room.updateStatus(RoomStatus.PLAYING);
     }
 
+    // 독서 일시정지/재개
+    @Transactional
+    public void pauseReading(Long roomId, Long hostId) {
+        ReadingRoom room = getRoom(roomId);
+        validateHost(room, hostId);
+
+        // PLAYING <-> PAUSED 토글
+        if (room.getStatus() == RoomStatus.PLAYING) {
+            room.updateStatus(RoomStatus.PAUSED);
+        } else if (room.getStatus() == RoomStatus.PAUSED) {
+            room.updateStatus(RoomStatus.PLAYING);
+        } else {
+            throw new CustomException(ErrorCode.INVALID_REQUEST_STATUS, "재생 중이거나 일시정지 상태에서만 사용 가능합니다.");
+        }
+    }
+
     // 목표 달성 및 종료
     @Transactional
     public void finishReading(Long roomId, Long hostId) {
@@ -227,5 +243,54 @@ public class ReadingRoomService {
         if (!room.getHost().getId().equals(hostId)) {
             throw new CustomException(ErrorCode.NOT_HOST);
         }
+    }
+
+    // ===== 조회 API =====
+
+    /**
+     * 전체 활성화된 독서룸 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse> getAllActiveRooms() {
+        List<ReadingRoom> rooms = readingRoomRepository.findAll().stream()
+                .filter(room -> room.getStatus() != RoomStatus.FINISHED)
+                .toList();
+
+        return rooms.stream()
+                .map(room -> {
+                    int participantCount = (int) roomParticipantRepository
+                            .countByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
+                    return com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse.from(room,
+                            participantCount);
+                })
+                .toList();
+    }
+
+    /**
+     * 독서룸 상세 조회
+     */
+    public com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse getRoomDetail(Long roomId) {
+        ReadingRoom room = getRoom(roomId);
+        int participantCount = (int) roomParticipantRepository
+                .countByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
+        return com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse.from(room, participantCount);
+    }
+
+    /**
+     * 내가 참여 중인 독서룸 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse> getMyRooms(Long userId) {
+        User user = getUser(userId);
+        List<RoomParticipant> myParticipations = roomParticipantRepository
+                .findByUserAndConnectionStatus(user, ConnectionStatus.ACTIVE);
+
+        return myParticipations.stream()
+                .map(participant -> {
+                    ReadingRoom room = participant.getReadingRoom();
+                    int participantCount = (int) roomParticipantRepository
+                            .countByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
+                    return com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse.from(room,
+                            participantCount);
+                })
+                .toList();
     }
 }

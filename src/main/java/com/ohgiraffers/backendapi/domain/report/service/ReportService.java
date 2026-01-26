@@ -98,4 +98,14 @@ public class ReportService {
 
         return reportRepository.countByTargetUser(targetUser);
     }
+
+    /**
+     * [일반 유저] 내가 한 신고 목록 조회
+     */
+    public java.util.List<Report> getMyReports(Long reporterId) {
+        User reporter = userRepository.findById(reporterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        return reportRepository.findByReporter(reporter);
+    }
 }

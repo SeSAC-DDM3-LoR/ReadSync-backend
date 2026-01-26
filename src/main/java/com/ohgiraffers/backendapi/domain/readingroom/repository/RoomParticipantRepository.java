@@ -13,17 +13,20 @@ import java.util.Optional;
 @Repository
 public interface RoomParticipantRepository extends JpaRepository<RoomParticipant, Long> {
 
-    // 특정 방에 특정 유저가 참여한 기록이 있는지 조회(강퇴 대상 찾기, 재입장 시도 시 기존 참여 이력(강퇴 여부 등) 확인)
-    Optional<RoomParticipant> findByReadingRoomAndUser(ReadingRoom readingRoom, User user);
+        // 특정 방에 특정 유저가 참여한 기록이 있는지 조회(강퇴 대상 찾기, 재입장 시도 시 기존 참여 이력(강퇴 여부 등) 확인)
+        Optional<RoomParticipant> findByReadingRoomAndUser(ReadingRoom readingRoom, User user);
 
-    // 방 인원 제한 체크
-    long countByReadingRoomAndConnectionStatus(ReadingRoom readingRoom, ConnectionStatus connectionStatus);
+        // 방 인원 제한 체크
+        long countByReadingRoomAndConnectionStatus(ReadingRoom readingRoom, ConnectionStatus connectionStatus);
 
-    // 특정 방에 '접속 중(ACTIVE)'인 모든 참여자 목록 조회(방 종료 시 참여자들에게 경험치(EXP) 일괄 지급)
-    List<RoomParticipant> findAllByReadingRoomAndConnectionStatus(ReadingRoom readingRoom,
-            ConnectionStatus connectionStatus);
+        // 특정 방에 '접속 중(ACTIVE)'인 모든 참여자 목록 조회(방 종료 시 참여자들에게 경험치(EXP) 일괄 지급)
+        List<RoomParticipant> findAllByReadingRoomAndConnectionStatus(ReadingRoom readingRoom,
+                        ConnectionStatus connectionStatus);
 
-    // 특정 방에 특정 유저가 특정 상태로 참여 중인지 확인 (채팅 참여자 검증용)
-    boolean existsByReadingRoomAndUserAndConnectionStatus(ReadingRoom readingRoom, User user,
-            ConnectionStatus connectionStatus);
+        // 특정 방에 특정 유저가 특정 상태로 참여 중인지 확인 (채팅 참여자 검증용)
+        boolean existsByReadingRoomAndUserAndConnectionStatus(ReadingRoom readingRoom, User user,
+                        ConnectionStatus connectionStatus);
+
+        // 특정 유저가 특정 상태로 참여 중인 모든 방 조회
+        List<RoomParticipant> findByUserAndConnectionStatus(User user, ConnectionStatus connectionStatus);
 }

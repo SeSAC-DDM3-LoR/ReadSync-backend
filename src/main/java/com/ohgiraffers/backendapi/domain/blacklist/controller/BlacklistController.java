@@ -4,7 +4,9 @@ import com.ohgiraffers.backendapi.domain.blacklist.dto.BlacklistRequest;
 import com.ohgiraffers.backendapi.domain.blacklist.dto.BlacklistResponse;
 import com.ohgiraffers.backendapi.domain.blacklist.entity.Blacklist;
 import com.ohgiraffers.backendapi.domain.blacklist.service.BlacklistService;
+import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,8 +34,7 @@ public class BlacklistController {
                 request.getTargetUserId(),
                 request.getType(),
                 request.getReason(),
-                request.getDurationDays()
-        );
+                request.getDurationDays());
         return ResponseEntity.ok("해당 유저가 블랙리스트에 등록되었습니다.");
     }
 
@@ -59,5 +60,15 @@ public class BlacklistController {
 
         blacklistService.releaseBlacklist(blacklistId);
         return ResponseEntity.ok("제재가 해제되었습니다.");
+    }
+
+    // [일반 유저] 내 제재 상태 확인
+    @GetMapping("/my-status")
+    @Operation(summary = "내 제재 상태 확인", description = "현재 로그인한 사용자의 제재 여부를 확인합니다.")
+    public ResponseEntity<BlacklistResponse.MyStatus> getMyBanStatus(
+            @Parameter(hidden = true) @CurrentUserId Long userId) {
+
+        BlacklistResponse.MyStatus status = blacklistService.getMyBanStatus(userId);
+        return ResponseEntity.ok(status);
     }
 }

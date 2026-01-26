@@ -131,4 +131,33 @@ public class RoomInvitationService {
             throw new CustomException(ErrorCode.NOT_YOUR_INVITATION);
         }
     }
+
+    // ===== 조회 API =====
+
+    /**
+     * 받은 초대장 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse> getReceivedInvitations(
+            Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<RoomInvitation> invitations = invitationRepository.findByReceiver(user);
+        return invitations.stream()
+                .map(com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse::from)
+                .toList();
+    }
+
+    /**
+     * 보낸 초대장 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse> getSentInvitations(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<RoomInvitation> invitations = invitationRepository.findBySender(user);
+        return invitations.stream()
+                .map(com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse::from)
+                .toList();
+    }
 }

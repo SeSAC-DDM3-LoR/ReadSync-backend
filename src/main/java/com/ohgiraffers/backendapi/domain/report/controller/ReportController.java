@@ -68,4 +68,15 @@ public class ReportController {
     public ResponseEntity<Long> getReportCount(@PathVariable Long userId) {
         return ResponseEntity.ok(reportService.getReportCountForUser(userId));
     }
+
+    @GetMapping("/my")
+    @Operation(summary = "내가 한 신고 목록 조회", description = "현재 사용자가 신고한 내역을 조회합니다.")
+    public ResponseEntity<java.util.List<ReportResponse>> getMyReports(
+            @CurrentUserId Long reporterId) {
+        java.util.List<Report> reports = reportService.getMyReports(reporterId);
+        java.util.List<ReportResponse> responses = reports.stream()
+                .map(ReportResponse::from)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
 }

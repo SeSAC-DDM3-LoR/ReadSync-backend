@@ -32,4 +32,14 @@ public class BlacklistResponse {
                 .isActive(blacklist.isActive())
                 .build();
     }
+
+    // 내 제재 상태 응답 DTO
+    @Getter
+    @Builder
+    public static class MyStatus {
+        private boolean isBanned;
+        private BlacklistType type;
+        private String reason;
+        private LocalDateTime endDate;
+    }
 }

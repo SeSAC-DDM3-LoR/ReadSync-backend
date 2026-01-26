@@ -196,4 +196,33 @@ public class FriendshipService {
             throw new CustomException(ErrorCode.NO_AUTHORITY_TO_UPDATE);
         }
     }
+
+    // ===== 조회 API =====
+
+    /**
+     * 받은 친구 요청 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse> getReceivedRequests(
+            Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<Friendship> requests = friendshipRepository.findByAddresseeAndStatus(user, FriendshipStatus.PENDING);
+        return requests.stream()
+                .map(com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse::from)
+                .toList();
+    }
+
+    /**
+     * 보낸 친구 요청 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse> getSentRequests(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<Friendship> requests = friendshipRepository.findByRequesterAndStatus(user, FriendshipStatus.PENDING);
+        return requests.stream()
+                .map(com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse::from)
+                .toList();
+    }
 }
