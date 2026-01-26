@@ -12,6 +12,8 @@ import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,14 +39,13 @@ public class LibraryService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 도서입니다."));
 
         Library library = request.toEntity(user, book);
-
         return libraryRepository.save(library).getLibraryId();
     }
 
-    public List<LibraryResponseDTO> getUserLibrary(Long userId) {
-        return libraryRepository.findAllByUserIdAndDeletedAtIsNull(userId).stream()
-                .map(LibraryResponseDTO::from)
-                .toList();
+    // 페이징 적용: 특정 유저의 서재 조회
+    public Page<LibraryResponseDTO> getUserLibrary(Long userId, Pageable pageable) {
+        return libraryRepository.findAllByUserIdAndDeletedAtIsNull(userId, pageable)
+                .map(LibraryResponseDTO::from);
     }
 
     @AwardExp(type = ActivityType.READ_BOOK)
@@ -56,20 +57,17 @@ public class LibraryService {
         library.updateStatus(status);
     }
 
-    public List<LibraryResponseDTO> getLibraryByUserIdAndCategoryId(Long userId, Long categoryId) {
-        // Repository에서 유저 ID와 카테고리 ID로 필터링된 결과 조회
-        List<Library> libraries = libraryRepository
-                .findAllByUserIdAndBook_Category_CategoryIdAndDeletedAtIsNull(userId, categoryId);
-
-        return libraries.stream()
-                .map(LibraryResponseDTO::from)
-                .toList();
+    // 페이징 적용: 카테고리별 서재 조회
+    public Page<LibraryResponseDTO> getLibraryByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable) {
+        return libraryRepository
+                .findAllByUserIdAndBook_Category_CategoryIdAndDeletedAtIsNull(userId, categoryId, pageable)
+                .map(LibraryResponseDTO::from);
     }
 
     @Transactional
     public void deleteFromLibrary(Long libraryId) {
         Library library = libraryRepository.findById(libraryId)
                 .orElseThrow(() -> new IllegalArgumentException("이미 삭제된 정보입니다."));
-        library.delete(); // Soft Delete
+        library.delete();
     }
 }
