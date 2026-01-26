@@ -5,6 +5,7 @@ import com.ohgiraffers.backendapi.domain.friendship.enums.FriendshipStatus;
 import com.ohgiraffers.backendapi.domain.friendship.repository.FriendshipRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.enums.UserActivityStatus;
+import com.ohgiraffers.backendapi.domain.user.enums.UserStatus;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
@@ -14,6 +15,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +36,34 @@ public class UserStatusService {
 
     private static final String STATUS_KEY_PREFIX = "user:status:";
     private static final long STATUS_EXPIRE_HOURS = 24;
+    private static final String USER_SESSION_KEY = "user:sessions:";
+
+    public void connectSession(Long userId, String sessionId) {
+        String sessionKey = USER_SESSION_KEY + userId;
+
+        // 1. 세션 ID를 Set에 추가
+        redisTemplate.opsForSet().add(sessionKey, sessionId);
+        redisTemplate.expire(sessionKey, Duration.ofHours(24)); // TTL 갱신
+
+        // 2. 상태를 ONLINE으로 설정 (이미 온라인이어도 갱신)
+        updateUserStatus(userId, UserActivityStatus.ONLINE);
+    }
+
+    // [수정] 퇴장 처리 (세션 제거 및 카운트 체크)
+    public void disconnectSession(Long userId, String sessionId) {
+        String sessionKey = USER_SESSION_KEY + userId;
+
+        // 1. 해당 세션 ID만 제거
+        redisTemplate.opsForSet().remove(sessionKey, sessionId);
+
+        // 2. 남은 세션 개수 확인
+        Long size = redisTemplate.opsForSet().size(sessionKey);
+
+        // 3. 세션이 하나도 남지 않았을 때만 OFFLINE 처리
+        if (size == null || size == 0) {
+            updateUserStatus(userId, UserActivityStatus.OFFLINE);
+        }
+    }
 
     /**
      * 사용자 상태 업데이트 및 친구들에게 알림
