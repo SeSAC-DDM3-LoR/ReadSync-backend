@@ -52,7 +52,7 @@ public class Bookmark extends BaseTimeEntity {
         // 2. 진행률 계산
         long readCount = updatedMask.chars().filter(ch -> ch == '1').count();
         this.progress = BigDecimal.valueOf(readCount)
-                .divide(BigDecimal.valueOf(chapter.getSequence()), 4, RoundingMode.HALF_UP)
+                .divide(BigDecimal.valueOf(chapter.getParagraphs()), 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
     }
@@ -63,9 +63,9 @@ public class Bookmark extends BaseTimeEntity {
         // 1. 마스크 업데이트
         for (Integer index : newIndices) {
             // 1. 유효성 검사: 1보다 작거나, 최대값(totalLength)보다 크면 예외 발생
-            if (index < 1 || index > chapter.getSequence()) {
+            if (index < 1 || index > chapter.getParagraphs()) {
                 throw new IllegalArgumentException(
-                        String.format("잘못된 문단 번호입니다: %d (허용 범위: 1 ~ %d)", index, chapter.getSequence())
+                        String.format("잘못된 문단 번호입니다: %d (허용 범위: 1 ~ %d)", index, chapter.getParagraphs())
                 );
             }
 

@@ -7,6 +7,8 @@ import com.ohgiraffers.backendapi.domain.book.repository.BookRepository;
 import com.ohgiraffers.backendapi.domain.category.entity.Category;
 import com.ohgiraffers.backendapi.domain.category.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,10 +42,9 @@ public class BookService {
     }
 
     // 3. 도서 전체 조회
-    public List<BookResponseDTO> getAllBooks() {
-        return bookRepository.findAllByDeletedAtIsNull().stream()
-                .map(BookResponseDTO::from)
-                .toList();
+    public Page<BookResponseDTO> getAllBooks(Pageable pageable) {
+        return bookRepository.findAllByDeletedAtIsNull(pageable)
+                .map(BookResponseDTO::from);
     }
 
     // 4. 도서 수정
@@ -69,4 +70,19 @@ public class BookService {
                 .orElseThrow(() -> new IllegalArgumentException("이미 존재하지 않는 도서입니다."));
         book.delete(); // BaseTimeEntity의 delete() 메서드 호출
     }
+
+    /**
+     * 도서 키워드 검색
+     * @param keyword 검색어 (제목 또는 저자)
+     * @return 검색된 도서 DTO 리스트
+     */
+    @Transactional(readOnly = true)
+    public Page<BookResponseDTO> searchBooks(String keyword, Pageable pageable) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Page.empty(pageable);
+        }
+        return bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(keyword, keyword, pageable)
+                .map(BookResponseDTO::from);
+    }
+
 }
