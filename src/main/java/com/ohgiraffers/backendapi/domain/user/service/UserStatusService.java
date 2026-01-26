@@ -11,10 +11,15 @@ import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.messaging.SessionConnectedEvent;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +42,34 @@ public class UserStatusService {
     private static final String STATUS_KEY_PREFIX = "user:status:";
     private static final long STATUS_EXPIRE_HOURS = 24;
     private static final String USER_SESSION_KEY = "user:sessions:";
+
+    // --- [NEW] 웹소켓 연결 이벤트 리스너 ---
+    @EventListener
+    public void handleWebSocketConnectListener(SessionConnectedEvent event) {
+        Principal user = event.getUser();
+        if (user != null) {
+            Long userId = Long.valueOf(user.getName());
+            // StompHeaderAccessor로 세션 ID 추출
+            StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
+            String sessionId = sha.getSessionId();
+
+            connectSession(userId, sessionId);
+            log.info("Event: WebSocket Connected userId={}, sessionId={}", userId, sessionId);
+        }
+    }
+
+    // --- [NEW] 웹소켓 연결 해제 이벤트 리스너 ---
+    @EventListener
+    public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
+        Principal user = event.getUser();
+        String sessionId = event.getSessionId();
+
+        if (user != null) {
+            Long userId = Long.valueOf(user.getName());
+            disconnectSession(userId, sessionId);
+            log.info("Event: WebSocket Disconnected userId={}, sessionId={}", userId, sessionId);
+        }
+    }
 
     public void connectSession(Long userId, String sessionId) {
         String sessionKey = USER_SESSION_KEY + userId;

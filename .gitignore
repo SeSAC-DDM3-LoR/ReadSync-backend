@@ -137,3 +137,7 @@ Temporary Items
 *_BASE_*.txt
 *_LOCAL_*.txt
 *_REMOTE_*.txt
+
+### API Test Files ###
+api-test.html
+websocket-test.html
