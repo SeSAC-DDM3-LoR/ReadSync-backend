@@ -7,6 +7,7 @@ import com.ohgiraffers.backendapi.domain.friendship.repository.FriendshipReposit
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.entity.UserInformation;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
+import com.ohgiraffers.backendapi.domain.user.service.UserStatusService;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +25,7 @@ public class FriendshipService {
 
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+    private final UserStatusService userStatusService;
 
     // 친구 요청
     @Transactional
@@ -37,9 +40,21 @@ public class FriendshipService {
         User addressee = userRepository.findById(addresseeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ADDRESSEE_NOT_FOUND));
 
-        // 중복 요청 방지
-        if (friendshipRepository.existsByUsers(requester, addressee)) {
-            throw new CustomException(ErrorCode.ALREADY_FRIENDS);
+        // 중복 요청 방지: 상태별로 다른 에러 메시지 반환
+        Optional<Friendship> existing = friendshipRepository.findByUsers(requester, addressee);
+        if (existing.isPresent()) {
+            FriendshipStatus status = existing.get().getStatus();
+            if (status == FriendshipStatus.ACCEPTED) {
+                throw new CustomException(ErrorCode.ALREADY_FRIENDS);
+            } else if (status == FriendshipStatus.PENDING) {
+                throw new CustomException(ErrorCode.FRIEND_REQUEST_ALREADY_SENT);
+            } else if (status == FriendshipStatus.BLOCKED) {
+                throw new CustomException(ErrorCode.USER_BLOCKED);
+            } else if (status == FriendshipStatus.REJECTED) {
+                // REJECTED 상태는 재요청 허용 (상태를 PENDING으로 변경)
+                existing.get().resendRequest();
+                return;
+            }
         }
 
         // 친구 저장
@@ -77,12 +92,15 @@ public class FriendshipService {
 
                     String profileImg = (info != null) ? info.getProfileImage() : null;
 
+                    // 실시간 상태 조회
+                    String status = userStatusService.getUserStatus(friend.getId()).name();
+
                     return new FriendListResponseDTO(
                             f.getFriendshipId(),
                             friend.getId(),
                             displayName,
                             profileImg,
-                            "OFFLINE"   // 실시간 접속 상태
+                            status // 실시간 접속 상태
                     );
                 })
                 .collect(Collectors.toList());
@@ -132,7 +150,6 @@ public class FriendshipService {
         friendship.cancel();
     }
 
-
     // 친구 삭제
     @Transactional
     public void unfriend(Long friendshipId, Long myUserId) {
@@ -163,8 +180,6 @@ public class FriendshipService {
         friendship.unblockFriendships();
     }
 
-
-
     // 내부 편의 메서드
     // id 조회 에러
     private Friendship getFriendshipOrThrow(Long friendshipId) {
@@ -180,5 +195,34 @@ public class FriendshipService {
         if (!isRequester && !isAddressee) {
             throw new CustomException(ErrorCode.NO_AUTHORITY_TO_UPDATE);
         }
+    }
+
+    // ===== 조회 API =====
+
+    /**
+     * 받은 친구 요청 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse> getReceivedRequests(
+            Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<Friendship> requests = friendshipRepository.findByAddresseeAndStatus(user, FriendshipStatus.PENDING);
+        return requests.stream()
+                .map(com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse::from)
+                .toList();
+    }
+
+    /**
+     * 보낸 친구 요청 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse> getSentRequests(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<Friendship> requests = friendshipRepository.findByRequesterAndStatus(user, FriendshipStatus.PENDING);
+        return requests.stream()
+                .map(com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse::from)
+                .toList();
     }
 }

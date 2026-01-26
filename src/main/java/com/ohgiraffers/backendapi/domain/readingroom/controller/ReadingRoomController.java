@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Tag(name = "Reading Room", description = "TTS 독서룸 관련 API")
 @RestController
@@ -24,8 +25,7 @@ public class ReadingRoomController {
     @PostMapping
     public ResponseEntity<Long> createRoom(
             @Parameter(hidden = true) @CurrentUserId Long userId,
-            @RequestBody CreateRoomRequest roomRequest
-    ) {
+            @RequestBody CreateRoomRequest roomRequest) {
         Long roomId = readingRoomService.createRoom(userId, roomRequest);
         return ResponseEntity.ok(roomId);
     }
@@ -34,8 +34,7 @@ public class ReadingRoomController {
     @PostMapping("/{roomId}/enter")
     public ResponseEntity<Void> enterRoom(
             @Parameter(hidden = true) @CurrentUserId Long userId,
-            @PathVariable Long roomId
-    ) {
+            @PathVariable Long roomId) {
         readingRoomService.enterRoom(roomId, userId);
         return ResponseEntity.ok().build();
     }
@@ -79,6 +78,16 @@ public class ReadingRoomController {
             @PathVariable Long roomId) {
 
         readingRoomService.startReading(roomId, hostId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "독서 일시정지/재개 (방장 전용)", description = "PLAYING과 PAUSED 상태를 토글합니다.")
+    @PatchMapping("/{roomId}/pause")
+    public ResponseEntity<Void> pauseReading(
+            @Parameter(hidden = true) @CurrentUserId Long hostId,
+            @PathVariable Long roomId) {
+
+        readingRoomService.pauseReading(roomId, hostId);
         return ResponseEntity.ok().build();
     }
 

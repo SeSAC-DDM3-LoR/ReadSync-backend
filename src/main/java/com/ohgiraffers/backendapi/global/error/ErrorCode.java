@@ -14,6 +14,8 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C001", "서버 내부 오류가 발생했습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C002", "잘못된 입력값입니다."),
     INVALID_TYPE_VALUE(HttpStatus.BAD_REQUEST, "C003", "잘못된 타입입니다."),
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "C004", "해당 리소스를 찾을 수 없습니다."),
+    DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "C005", "이미 존재하는 데이터입니다."),
 
     // 인증/권환
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
@@ -56,6 +58,8 @@ public enum ErrorCode {
     FRIEND_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "F004", "존재하지 않는 친구 요청입니다."),
     NO_AUTHORITY_TO_UPDATE(HttpStatus.FORBIDDEN, "F005", "해당 작업에 대한 권한이 없습니다."),
     INVALID_REQUEST_STATUS(HttpStatus.BAD_REQUEST, "F006", "유효하지 않은 요청 상태입니다."),
+    FRIEND_REQUEST_ALREADY_SENT(HttpStatus.CONFLICT, "F007", "이미 친구 요청을 보냈습니다."),
+    USER_BLOCKED(HttpStatus.FORBIDDEN, "F008", "차단된 사용자입니다."),
 
     // 서재
     LIBRARY_NOT_FOUND(HttpStatus.NOT_FOUND, "L001", "서재에 존재하지 않는 책입니다."),
@@ -76,6 +80,10 @@ public enum ErrorCode {
     INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R013", "존재하지 않거나 삭제된 초대장입니다."),
     INVITATION_EXPIRED(HttpStatus.BAD_REQUEST, "R014", "만료된 초대장입니다."),
 
+    // 채팅
+    CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "CHT001", "해당 채팅 로그를 찾을 수 없습니다."),
+    NOT_ROOM_PARTICIPANT(HttpStatus.FORBIDDEN, "CHT002", "해당 독서룸의 참여자가 아닙니다."),
+
     // 장바구니
     CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "CA001", "장바구니에서 해당 항목을 찾을 수 없습니다."),
 
@@ -84,8 +92,12 @@ public enum ErrorCode {
     ALREADY_SUBSCRIBED(HttpStatus.BAD_REQUEST, "SUB001", "이미 구독 중인 사용자입니다."),
     ROOM_FINISHED(HttpStatus.CONFLICT, "R015", "종료된 독서룸입니다."),
 
+    // 블랙리스트
+    USER_BANNED(HttpStatus.FORBIDDEN, "BL001", "정지된 계정입니다."),
+
     // 신고
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "RPT001", "해당 신고를 찾을 수 없습니다."),
+    DUPLICATE_REPORT(HttpStatus.CONFLICT, "RPT002", "이미 신고한 메시지입니다."),
 
     // AI 채팅
     AI_CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "AI001", "해당 AI 채팅방을 찾을 수 없습니다."),
@@ -108,4 +120,3 @@ public enum ErrorCode {
  * throw new CustomException(ErrorCode.USER_NOT_FOUND, "ID: " + userId);
  * 
  */
-

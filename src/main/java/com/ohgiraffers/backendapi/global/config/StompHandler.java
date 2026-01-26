@@ -1,5 +1,6 @@
 package com.ohgiraffers.backendapi.global.config;
 
+import com.ohgiraffers.backendapi.domain.user.service.UserStatusService;
 import com.ohgiraffers.backendapi.global.auth.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -25,42 +27,19 @@ public class StompHandler implements ChannelInterceptor {
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        StompHeaderAccessor accessor =
-                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        // 연결 요청(CONNECT)일 때만 토큰 검사
-        if (accessor != null && accessor.getCommand() == StompCommand.CONNECT) {
-
-            // 토큰 추출
-            String authorizationHeader = accessor.getFirstNativeHeader("Authorization");
-
-            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-                log.error("WS Connect Fail: No JWT Token found");
-                throw new AccessDeniedException("로그인이 필요합니다.");
-            }
-
-            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7);
-
+        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+            String token = accessor.getFirstNativeHeader("Authorization");
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
                 if (jwtTokenProvider.validateToken(token)) {
-                    // 인증 객체 생성
-                    Authentication authentication = jwtTokenProvider.getAuthentication(token);
-
-                    // 소켓 세션 등록
-                    accessor.setUser(authentication);
-
-                    log.info("WS Connect Success: User Id = {}", authentication.getName());
-
-                } else {
-                    log.warn("WS Connect Fail: Invalid Token");
-                    throw new AccessDeniedException("유효하지 않은 토큰입니다.");
+                    Authentication auth = jwtTokenProvider.getAuthentication(token);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    accessor.setUser(auth); // 여기서 저장한 User가 이벤트로 전달됨
                 }
-            } else  {
-                log.warn("WS Connect Fail: No Token");
-                throw new AccessDeniedException("토큰이 없습니다.");
             }
         }
-
         return message;
     }
 }
