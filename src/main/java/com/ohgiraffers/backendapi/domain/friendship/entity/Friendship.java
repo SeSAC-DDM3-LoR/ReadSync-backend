@@ -12,12 +12,9 @@ import com.ohgiraffers.backendapi.domain.user.entity.User;
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SuperBuilder
-@Table(
-        name = "friendships",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "UQ_FRIENDSHIP_PAIR", columnNames = {"requester_id", "addressee_id"})
-        }
-)
+@Table(name = "friendships", uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_FRIENDSHIP_PAIR", columnNames = { "requester_id", "addressee_id" })
+})
 public class Friendship extends BaseTimeEntity {
 
     @Id
@@ -38,7 +35,6 @@ public class Friendship extends BaseTimeEntity {
     @Builder.Default
     private FriendshipStatus status = FriendshipStatus.PENDING;
 
-
     // 상태 변경 편의 메서드
     /**
      * 친구 요청 수락
@@ -55,7 +51,7 @@ public class Friendship extends BaseTimeEntity {
     }
 
     /**
-     *  상대방 차단
+     * 상대방 차단
      */
     public void block() {
         this.status = FriendshipStatus.BLOCKED;
@@ -80,5 +76,14 @@ public class Friendship extends BaseTimeEntity {
      */
     public void cancel() {
         this.delete();
+    }
+
+    /**
+     * 거절된 요청 재전송 (REJECTED -> PENDING)
+     */
+    public void resendRequest() {
+        if (this.status == FriendshipStatus.REJECTED) {
+            this.status = FriendshipStatus.PENDING;
+        }
     }
 }
