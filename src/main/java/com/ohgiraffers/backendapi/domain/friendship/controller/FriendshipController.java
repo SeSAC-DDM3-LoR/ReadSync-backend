@@ -34,8 +34,7 @@ public class FriendshipController {
     @Operation(summary = "내 친구 목록 조회")
     @GetMapping
     public ResponseEntity<List<FriendListResponseDTO>> getMyFriends(
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         List<FriendListResponseDTO> response = friendshipService.getMyFriends(currentUserId);
         return ResponseEntity.ok(response);
     }
@@ -44,8 +43,7 @@ public class FriendshipController {
     @PostMapping("/{friendshipId}/accept")
     public ResponseEntity<Void> acceptFriendRequest(
             @PathVariable Long friendshipId,
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         friendshipService.acceptFriend(friendshipId, currentUserId);
         return ResponseEntity.ok().build();
     }
@@ -54,8 +52,7 @@ public class FriendshipController {
     @PostMapping("/{friendshipId}/reject")
     public ResponseEntity<Void> rejectFriendRequest(
             @PathVariable Long friendshipId,
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         friendshipService.rejectFriend(friendshipId, currentUserId);
         return ResponseEntity.ok().build();
     }
@@ -64,8 +61,7 @@ public class FriendshipController {
     @PostMapping("/{friendshipId}/cancel")
     public ResponseEntity<Void> cancelFriendRequest(
             @PathVariable Long friendshipId,
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         friendshipService.cancelFriendRequest(friendshipId, currentUserId);
         return ResponseEntity.ok().build();
     }
@@ -74,8 +70,7 @@ public class FriendshipController {
     @PostMapping("/{friendshipId}")
     public ResponseEntity<Void> unfriend(
             @PathVariable Long friendshipId,
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         friendshipService.unfriend(friendshipId, currentUserId);
         return ResponseEntity.ok().build();
     }
@@ -84,8 +79,7 @@ public class FriendshipController {
     @PostMapping("/{friendshipId}/block")
     public ResponseEntity<Void> block(
             @PathVariable Long friendshipId,
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         friendshipService.blockFriend(friendshipId, currentUserId);
         return ResponseEntity.ok().build();
     }
@@ -94,10 +88,27 @@ public class FriendshipController {
     @PostMapping("/{friendshipId}/unblock")
     public ResponseEntity<Void> unblock(
             @PathVariable Long friendshipId,
-            @Parameter(hidden = true) @CurrentUserId Long currentUserId
-    ) {
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
         friendshipService.unblockFriend(friendshipId, currentUserId);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "받은 친구 요청 목록 조회", description = "현재 사용자가 받은 친구 요청 목록을 조회합니다.")
+    @GetMapping("/requests/received")
+    public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse>> getReceivedRequests(
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
+        java.util.List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse> requests = friendshipService
+                .getReceivedRequests(currentUserId);
+        return ResponseEntity.ok(requests);
+    }
+
+    @Operation(summary = "보낸 친구 요청 목록 조회", description = "현재 사용자가 보낸 친구 요청 목록을 조회합니다.")
+    @GetMapping("/requests/sent")
+    public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse>> getSentRequests(
+            @Parameter(hidden = true) @CurrentUserId Long currentUserId) {
+        java.util.List<com.ohgiraffers.backendapi.domain.friendship.dto.FriendRequestResponse> requests = friendshipService
+                .getSentRequests(currentUserId);
+        return ResponseEntity.ok(requests);
     }
 
 }

@@ -196,11 +196,24 @@ CREATE TABLE "exp_logs" (
 );
 
 -- 12. Reports
+-- CREATE TABLE "reports" (
+--     "report_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+--     "reporter_id" BIGINT NOT NULL,
+--     "chat_id" BIGINT NOT NULL,
+--     "reason" TEXT NOT NULL,
+--     "status" VARCHAR(20) DEFAULT 'PENDING' NOT NULL,
+--     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
+--     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
+--     CONSTRAINT "PK_REPORTS" PRIMARY KEY ("report_id")
+-- );
+
 CREATE TABLE "reports" (
     "report_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-    "reporter_id" BIGINT NOT NULL,
-    "chat_id" BIGINT NOT NULL,
-    "reason" TEXT NOT NULL,
+    "reporter_id" BIGINT NOT NULL,          -- 신고자
+    "target_user_id" BIGINT NOT NULL,       -- [추가] 피신고자 (조회 성능 향상)
+    "chat_id" BIGINT NULL,                  -- [수정] 원본 채팅이 삭제될 수 있으므로 NULL 허용
+    "reason" TEXT NOT NULL,                 -- 신고 사유
+    "reported_content" TEXT NOT NULL,       -- [추가] 증거 보존용 채팅 내용 스냅샷
     "status" VARCHAR(20) DEFAULT 'PENDING' NOT NULL,
     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
@@ -447,14 +460,27 @@ CREATE TABLE "chapters" (
 );
 
 -- 30. Blacklists
+-- CREATE TABLE "blacklists" (
+--     "blacklist_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+--     "user_id" BIGINT NOT NULL,
+--     "type" VARCHAR(20) NOT NULL,
+--     "reason" TEXT NULL,
+--     "start_date" TIMESTAMP DEFAULT now() NOT NULL,
+--     "end_date" TIMESTAMP NOT NULL,
+--     "is_active" BOOLEAN DEFAULT TRUE NOT NULL,
+--     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
+--     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
+--     CONSTRAINT "PK_BLACKLISTS" PRIMARY KEY ("blacklist_id")
+-- );
+
 CREATE TABLE "blacklists" (
     "blacklist_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "user_id" BIGINT NOT NULL,
-    "type" VARCHAR(20) NOT NULL,
-    "reason" TEXT NULL,
+    "type" VARCHAR(20) NOT NULL,            -- BAN(차단), MUTE(채팅금지) 등
+    "reason" TEXT NULL,                     -- 제재 사유
     "start_date" TIMESTAMP DEFAULT now() NOT NULL,
-    "end_date" TIMESTAMP NOT NULL,
-    "is_active" BOOLEAN DEFAULT TRUE NOT NULL,
+    "end_date" TIMESTAMP NOT NULL,          -- 제재 종료일 (영구정지면 아주 먼 미래로 설정)
+    "is_active" BOOLEAN DEFAULT TRUE NOT NULL, -- [핵심] 해제되더라도 false로 바꾸고 기록은 남김
     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
     CONSTRAINT "PK_BLACKLISTS" PRIMARY KEY ("blacklist_id")
@@ -603,8 +629,20 @@ ALTER TABLE "room_participants" ADD CONSTRAINT "FK_reading_rooms_TO_room_partici
 ALTER TABLE "room_participants" ADD CONSTRAINT "FK_users_TO_room_participants_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "exp_logs" ADD CONSTRAINT "FK_users_TO_exp_logs_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "exp_logs" ADD CONSTRAINT "FK_exp_rules_TO_exp_logs_1" FOREIGN KEY ("exp_rule_id") REFERENCES "exp_rules" ("exp_rule_id");
-ALTER TABLE "reports" ADD CONSTRAINT "FK_users_TO_reports_reporter" FOREIGN KEY ("reporter_id") REFERENCES "users" ("user_id");
-ALTER TABLE "reports" ADD CONSTRAINT "FK_chat_logs_TO_reports_target" FOREIGN KEY ("chat_id") REFERENCES "chat_logs" ("chat_id");
+-- ALTER TABLE "reports" ADD CONSTRAINT "FK_users_TO_reports_reporter" FOREIGN KEY ("reporter_id") REFERENCES "users" ("user_id");
+-- ALTER TABLE "reports" ADD CONSTRAINT "FK_chat_logs_TO_reports_target" FOREIGN KEY ("chat_id") REFERENCES "chat_logs" ("chat_id");
+
+ALTER TABLE "reports" ADD CONSTRAINT "FK_users_TO_reports_reporter"
+    FOREIGN KEY ("reporter_id") REFERENCES "users" ("user_id");
+
+-- [추가] 피신고자 FK 추가
+ALTER TABLE "reports" ADD CONSTRAINT "FK_users_TO_reports_target"
+    FOREIGN KEY ("target_user_id") REFERENCES "users" ("user_id");
+
+-- [수정] 원본 채팅이 삭제되면 chat_id를 NULL로 설정 (증거는 reported_content에 남음)
+ALTER TABLE "reports" ADD CONSTRAINT "FK_chat_logs_TO_reports_origin"
+    FOREIGN KEY ("chat_id") REFERENCES "chat_logs" ("chat_id") ON DELETE SET NULL;
+
 ALTER TABLE "carts" ADD CONSTRAINT "FK_users_TO_carts_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "carts" ADD CONSTRAINT "FK_books_TO_carts_1" FOREIGN KEY ("book_id") REFERENCES "books" ("book_id");
 ALTER TABLE "book_ai_chats" ADD CONSTRAINT "FK_book_ai_chat_rooms_TO_book_ai_chats_1" FOREIGN KEY ("ai_room_id") REFERENCES "book_ai_chat_rooms" ("ai_room_id");

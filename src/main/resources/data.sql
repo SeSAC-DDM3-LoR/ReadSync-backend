@@ -59,10 +59,15 @@ INSERT INTO "refresh_tokens" ("user_id", "token") VALUES
                                                       (4, 'ref_token_user_c');
 
 -- [8] Blacklists (차단 내역 - User 참조)
-INSERT INTO "blacklists" ("user_id", "type", "reason", "end_date", "is_active") VALUES
-                                                                                    (3, 'SITE_BAN', '운영 정책 위반(욕설)', now() + interval '7 days', TRUE),
-                                                                                    (4, 'SITE_BAN', '도배성 댓글', now() + interval '1 days', FALSE),
-                                                                                    (2, 'SITE_BAN', '결제 오류 악용', now() + interval '3 days', TRUE);
+-- INSERT INTO "blacklists" ("user_id", "type", "reason", "end_date", "is_active") VALUES
+--                                                                                     (3, 'SITE_BAN', '운영 정책 위반(욕설)', now() + interval '7 days', TRUE),
+--                                                                                     (4, 'SITE_BAN', '도배성 댓글', now() + interval '1 days', FALSE),
+--                                                                                     (2, 'SITE_BAN', '결제 오류 악용', now() + interval '3 days', TRUE);
+-- [8] Blacklists (수정됨: start_date 추가)
+INSERT INTO "blacklists" ("user_id", "type", "reason", "start_date", "end_date", "is_active") VALUES
+(3, 'SITE_BAN', '운영 정책 위반(욕설)', now(), now() + interval '7 days', TRUE),
+(4, 'SITE_BAN', '도배성 댓글', now(), now() + interval '1 days', FALSE),
+(2, 'SITE_BAN', '결제 오류 악용', now(), now() + interval '3 days', TRUE);
 
 -- [9] Books (도서 정보 - Category 참조)
 INSERT INTO "books" ("category_id", "title", "author", "summary", "price", "language") VALUES
@@ -221,10 +226,14 @@ INSERT INTO "room_invitations" ("room_id", "status", "receiver_id", "sender_id")
                                                                                      (1, 'REJECTED', 4, 2);
 
 -- [34] Reports (채팅 신고 - User, ChatLog 참조)
-INSERT INTO "reports" ("reporter_id", "chat_id", "reason") VALUES
-                                                               (3, 1, '부적절한 대화 내용'),
-                                                               (2, 3, '광고성 메시지'),
-                                                               (4, 2, '욕설 사용');
+-- INSERT INTO "reports" ("reporter_id", "chat_id", "reason") VALUES
+--                                                                (3, 1, '부적절한 대화 내용'),
+--                                                                (2, 3, '광고성 메시지'),
+--                                                                (4, 2, '욕설 사용');
+INSERT INTO "reports" ("reporter_id", "target_user_id", "chat_id", "reason", "reported_content") VALUES
+(3, 2, 1, '부적절한 대화 내용', '안녕하세요! 1장부터 읽으시죠.'),
+(2, 4, 3, '광고성 메시지', '혼자 하려니 심심하네요.'), -- 3번 채팅은 user 4가 작성
+(4, 3, 2, '욕설 사용', '네 반갑습니다.'); -- 2번 채팅은 user 3가 작성
 
 -- [35] Book AI Chat Rooms (AI 채팅방 - User, Chapter 참조)
 INSERT INTO "book_ai_chat_rooms" ("user_id", "chapter_id", "title") VALUES

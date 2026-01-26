@@ -47,4 +47,22 @@ public class RoomInvitationController {
         invitationService.rejectInvitation(invitationId, userId);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "받은 초대장 목록 조회", description = "현재 사용자가 받은 초대장 목록을 조회합니다.")
+    @GetMapping("/received")
+    public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse>> getReceivedInvitations(
+            @Parameter(hidden = true) @CurrentUserId Long userId) {
+        java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse> invitations = invitationService
+                .getReceivedInvitations(userId);
+        return ResponseEntity.ok(invitations);
+    }
+
+    @Operation(summary = "보낸 초대장 목록 조회", description = "현재 사용자가 보낸 초대장 목록을 조회합니다.")
+    @GetMapping("/sent")
+    public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse>> getSentInvitations(
+            @Parameter(hidden = true) @CurrentUserId Long userId) {
+        java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.InvitationResponse> invitations = invitationService
+                .getSentInvitations(userId);
+        return ResponseEntity.ok(invitations);
+    }
 }
