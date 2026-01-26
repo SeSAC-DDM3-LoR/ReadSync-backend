@@ -12,7 +12,9 @@ import com.ohgiraffers.backendapi.domain.payment.repository.PaymentMethodReposit
 import com.ohgiraffers.backendapi.domain.payment.service.TossPaymentService;
 import com.ohgiraffers.backendapi.domain.subscription.dto.SubscriptionResponse;
 import com.ohgiraffers.backendapi.domain.subscription.entity.Subscription;
+import com.ohgiraffers.backendapi.domain.subscription.entity.SubscriptionPlan;
 import com.ohgiraffers.backendapi.domain.subscription.enums.SubscriptionStatus;
+import com.ohgiraffers.backendapi.domain.subscription.repository.SubscriptionPlanRepository;
 import com.ohgiraffers.backendapi.domain.subscription.repository.SubscriptionRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
@@ -24,7 +26,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,8 @@ import java.util.UUID;
 public class SubscriptionService {
 
         private final SubscriptionRepository subscriptionRepository;
+        private final com.ohgiraffers.backendapi.domain.credit.service.CreditService creditService;
+        private final SubscriptionPlanRepository subscriptionPlanRepository;
         private final PaymentMethodRepository paymentMethodRepository;
         private final PaymentHistoryRepository paymentHistoryRepository;
         private final TossPaymentService tossPaymentService;
@@ -50,9 +53,13 @@ public class SubscriptionService {
          * 정기 구독 신청 (첫 결제 포함)
          */
         @Transactional
-        public SubscriptionResponse subscribe(Long userId, String planName, BigDecimal price) {
+        public SubscriptionResponse subscribe(Long userId, Long planId) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+                SubscriptionPlan plan = subscriptionPlanRepository.findById(planId)
+                                .orElseThrow(() -> new CustomException(ErrorCode.INTERNAL_SERVER_ERROR,
+                                                "존재하지 않는 구독 플랜입니다."));
 
                 // 이미 구독 중인지 확인
                 subscriptionRepository.findByUserAndSubscriptionStatus(user, SubscriptionStatus.ACTIVE)
@@ -73,15 +80,14 @@ public class SubscriptionService {
                 Map<String, Object> paymentResult = tossPaymentService.executeBillingPayment(
                                 paymentMethod.getBillingKey(),
                                 paymentMethod.getCustomerKey(),
-                                price,
+                                plan.getPrice(),
                                 orderId,
-                                planName + " 구독");
+                                plan.getPlanName() + " 구독");
 
                 // 결제 성공 시 데이터 저장
                 Subscription subscription = Subscription.builder()
                                 .user(user)
-                                .planName(planName)
-                                .price(price)
+                                .plan(plan)
                                 .subscriptionStatus(SubscriptionStatus.ACTIVE)
                                 .startedAt(LocalDateTime.now())
                                 .nextBillingDate(LocalDateTime.now().plusMonths(1))
@@ -90,13 +96,12 @@ public class SubscriptionService {
                 Subscription savedSubscription = subscriptionRepository.save(subscription);
 
                 // 정기 결제용 주문 생성 (DB FK 제약조건 준수)
-                // TODO: 추후 SubscriptionOrder 등으로 분리하거나 Order 구조 개선 고려
                 Order subscriptionOrder = Order.builder()
                                 .user(user)
                                 .paymentMethod(paymentMethod)
                                 .orderUid(orderId)
-                                .orderName(planName + " 구독 (첫 결제)")
-                                .totalAmount(price)
+                                .orderName(plan.getPlanName() + " 구독 (첫 결제)")
+                                .totalAmount(plan.getPrice())
                                 .status(com.ohgiraffers.backendapi.domain.order.enums.OrderStatus.COMPLETED)
                                 .subscription(savedSubscription)
                                 .build();
@@ -107,12 +112,23 @@ public class SubscriptionService {
                 PaymentHistory history = PaymentHistory.builder()
                                 .order(savedOrder)
                                 .pgPaymentKey((String) paymentResult.get("paymentKey"))
-                                .amount(price)
+                                .amount(plan.getPrice())
                                 .paymentStatus(PaymentStatus.DONE)
                                 .transType(TransactionType.PAY)
                                 .pgProvider(PgProvider.TOSS)
                                 .build();
                 paymentHistoryRepository.save(history);
+
+                // 크레딧 지급
+                if (plan.getGiveCredit() != null && plan.getGiveCredit() > 0) {
+                        try {
+                                creditService.provideCredit(user.getId(), 4L, plan.getGiveCredit());
+                                log.info("구독 크레딧 지급 완료 - User: {}, Amount: {}", user.getId(), plan.getGiveCredit());
+                        } catch (Exception e) {
+                                log.error("구독 크레딧 지급 실패: {}", e.getMessage());
+                                // 크레딧 지급 실패가 구독 실패로 이어지지는 않도록 처리
+                        }
+                }
 
                 return convertToResponse(savedSubscription);
         }
@@ -133,8 +149,7 @@ public class SubscriptionService {
                 Subscription updatedSubscription = Subscription.builder()
                                 .subId(subscription.getSubId())
                                 .user(subscription.getUser())
-                                .planName(subscription.getPlanName())
-                                .price(subscription.getPrice())
+                                .plan(subscription.getPlan())
                                 .subscriptionStatus(SubscriptionStatus.CANCELED)
                                 .startedAt(subscription.getStartedAt())
                                 .nextBillingDate(subscription.getNextBillingDate())
@@ -185,16 +200,15 @@ public class SubscriptionService {
                 Map<String, Object> paymentResult = tossPaymentService.executeBillingPayment(
                                 paymentMethod.getBillingKey(),
                                 paymentMethod.getCustomerKey(),
-                                sub.getPrice(),
+                                sub.getPlan().getPrice(),
                                 orderId,
-                                sub.getPlanName() + " 정기 갱신");
+                                sub.getPlan().getPlanName() + " 정기 갱신");
 
                 // 다음 결제일 업데이트
                 Subscription updatedSub = Subscription.builder()
                                 .subId(sub.getSubId())
                                 .user(sub.getUser())
-                                .planName(sub.getPlanName())
-                                .price(sub.getPrice())
+                                .plan(sub.getPlan())
                                 .subscriptionStatus(SubscriptionStatus.ACTIVE)
                                 .startedAt(sub.getStartedAt())
                                 .nextBillingDate(sub.getNextBillingDate().plusMonths(1))
@@ -206,8 +220,8 @@ public class SubscriptionService {
                                 .user(sub.getUser())
                                 .paymentMethod(paymentMethod)
                                 .orderUid(orderId)
-                                .orderName(sub.getPlanName() + " 정기 갱신")
-                                .totalAmount(sub.getPrice())
+                                .orderName(sub.getPlan().getPlanName() + " 정기 갱신")
+                                .totalAmount(sub.getPlan().getPrice())
                                 .status(com.ohgiraffers.backendapi.domain.order.enums.OrderStatus.COMPLETED)
                                 .subscription(updatedSub)
                                 .build();
@@ -217,12 +231,23 @@ public class SubscriptionService {
                 PaymentHistory history = PaymentHistory.builder()
                                 .order(savedOrder)
                                 .pgPaymentKey((String) paymentResult.get("paymentKey"))
-                                .amount(sub.getPrice())
+                                .amount(sub.getPlan().getPrice())
                                 .paymentStatus(PaymentStatus.DONE)
                                 .transType(TransactionType.PAY)
                                 .pgProvider(PgProvider.TOSS)
                                 .build();
                 paymentHistoryRepository.save(history);
+
+                // 크레딧 지급 (갱신 시에도 지급)
+                if (sub.getPlan().getGiveCredit() != null && sub.getPlan().getGiveCredit() > 0) {
+                        try {
+                                creditService.provideCredit(sub.getUser().getId(), 4L, sub.getPlan().getGiveCredit());
+                                log.info("구독 갱신 크레딧 지급 완료 - User: {}, Amount: {}", sub.getUser().getId(),
+                                                sub.getPlan().getGiveCredit());
+                        } catch (Exception e) {
+                                log.error("구독 갱신 크레딧 지급 실패: {}", e.getMessage());
+                        }
+                }
         }
 
         /**
@@ -234,8 +259,7 @@ public class SubscriptionService {
                 Subscription failedSub = Subscription.builder()
                                 .subId(sub.getSubId())
                                 .user(sub.getUser())
-                                .planName(sub.getPlanName())
-                                .price(sub.getPrice())
+                                .plan(sub.getPlan())
                                 .subscriptionStatus(SubscriptionStatus.PAYMENT_FAILED)
                                 .startedAt(sub.getStartedAt())
                                 .nextBillingDate(sub.getNextBillingDate())
@@ -259,8 +283,7 @@ public class SubscriptionService {
                         Subscription expiredSub = Subscription.builder()
                                         .subId(sub.getSubId())
                                         .user(sub.getUser())
-                                        .planName(sub.getPlanName())
-                                        .price(sub.getPrice())
+                                        .plan(sub.getPlan())
                                         .subscriptionStatus(SubscriptionStatus.EXPIRED)
                                         .startedAt(sub.getStartedAt())
                                         .nextBillingDate(sub.getNextBillingDate())
@@ -272,14 +295,7 @@ public class SubscriptionService {
         }
 
         private SubscriptionResponse convertToResponse(Subscription sub) {
-                return SubscriptionResponse.builder()
-                                .subId(sub.getSubId())
-                                .planName(sub.getPlanName())
-                                .price(sub.getPrice())
-                                .status(sub.getSubscriptionStatus())
-                                .nextBillingDate(sub.getNextBillingDate())
-                                .startedAt(sub.getStartedAt())
-                                .build();
+                return SubscriptionResponse.from(sub);
         }
 
         public SubscriptionResponse getMySubscription(Long userId) {

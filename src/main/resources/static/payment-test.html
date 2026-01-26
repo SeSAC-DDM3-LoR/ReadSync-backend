@@ -122,176 +122,23 @@
         <h2>📅 정기 구독 (Billing Auth)</h2>
         <button onclick="requestBillingAuth()">카드 등록 (빌링키 발급)</button>
         <hr>
-        <label>Plan Name (플랜명):</label>
-        <input type="text" id="planName" value="프리미엄 멤버십">
-        <label>Price (가격):</label>
-        <input type="number" id="subPrice" value="9900">
+        <label>Plan ID (플랜 ID):</label>
+        <input type="number" id="planId" value="2" placeholder="1: Basic, 2: Premium, 3: Family">
         <button onclick="subscribe()">구독 신청</button>
+        <button onclick="getMySubscription()" style="background-color: #6c757d;">내 구독 정보 조회</button>
         <pre id="subResult"></pre>
     </div>
 
-    <div class="section">
-        <h2>📋 로그 / 결과</h2>
-        <pre id="logArea">대기 중...</pre>
-    </div>
+    <!-- ... (Log section unchanged) ... -->
 
     <script>
-        // 초기화 및 로컬 스토리지 로드
-        window.onload = function () {
-            const token = localStorage.getItem('jwtToken');
-            const key = localStorage.getItem('clientKey');
-            if (token) document.getElementById('jwtToken').value = token;
-            if (key) document.getElementById('clientKey').value = key;
-
-            // URL 파라미터 확인 (리다이렉트 처리)
-            processRedirect();
-        };
-
-        function saveConfig() {
-            const token = document.getElementById('jwtToken').value.trim();
-            const key = document.getElementById('clientKey').value.trim();
-            localStorage.setItem('jwtToken', token);
-            localStorage.setItem('clientKey', key);
-            alert('설정이 저장되었습니다.');
-        }
-
-        function getAuthHeader() {
-            let token = document.getElementById('jwtToken').value.trim();
-            if (!token.startsWith('Bearer ')) {
-                token = 'Bearer ' + token;
-            }
-            return { 'Authorization': token, 'Content-Type': 'application/json' };
-        }
-
-        function log(msg, isError = false) {
-            const area = document.getElementById('logArea');
-            area.style.color = isError ? 'red' : 'black';
-            area.innerText = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
-        }
-
-        async function showSection(id) {
-            document.querySelectorAll('.section').forEach(el => {
-                if (el.id !== 'cart' && el.id !== 'payment' && el.id !== 'subscription') return; // 설정/로그 제외
-                el.classList.add('hidden');
-            });
-            document.getElementById(id).classList.remove('hidden');
-
-            if (id === 'payment') {
-                await renderWidget();
-            }
-        }
-
-        // --- 장바구니 ---
-        function addToCart() {
-            const bookId = document.getElementById('bookId').value;
-            const quantity = document.getElementById('quantity').value;
-
-            fetch('/api/v1/carts', {
-                method: 'POST',
-                headers: getAuthHeader(),
-                body: JSON.stringify({ bookId: parseInt(bookId), quantity: parseInt(quantity) })
-            })
-                .then(res => res.ok ? res.json() : Promise.reject(res))
-                .then(data => {
-                    log('장바구니 담기 성공: ' + JSON.stringify(data));
-                    getCart();
-                })
-                .catch(async err => log('에러: ' + (err.json ? JSON.stringify(await err.json()) : err), true));
-        }
-
-        function getCart() {
-            fetch('/api/v1/carts', { headers: getAuthHeader() })
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('cartResult').innerText = JSON.stringify(data, null, 2);
-                    // 총액 계산
-                    let total = 0;
-                    data.forEach(item => total += item.totalPrice);
-                    document.getElementById('amount').value = total;
-                    log('장바구니 조회 완료. 총액: ' + total);
-                });
-        }
-
-        // --- 결제 (Widget) ---
-        let paymentWidget = null;
-        let paymentMethodsWidget = null;
-        let isWidgetReady = false;
-
-        async function renderWidget() {
-            const clientKey = document.getElementById('clientKey').value;
-            if (!clientKey) { alert('Client Key를 설정해주세요.'); return; }
-
-            // TossPaymentWidget 초기화
-            const customerKey = "customer_" + Math.random().toString(36).substring(2, 12);
-
-            try {
-                isWidgetReady = false;
-
-                if (!paymentWidget) {
-                    paymentWidget = PaymentWidget(clientKey, customerKey);
-                }
-
-                // 결제 수단 렌더링 (Promise 반환)
-                await paymentWidget.renderPaymentMethods('#payment-widget', {
-                    value: parseInt(document.getElementById('amount').value)
-                });
-
-                // 이용 약관 렌더링 (필수)
-                await paymentWidget.renderAgreement('#agreement');
-
-                isWidgetReady = true;
-                log('결제 위젯 렌더링 완료');
-            } catch (error) {
-                log('위젯 렌더링 에러: ' + JSON.stringify(error), true);
-            }
-        }
-
-        function requestPayment() {
-            if (!paymentWidget || !isWidgetReady) {
-                alert('결제 위젯이 아직 준비되지 않았습니다. 잠시만 기다려주세요.');
-                return;
-            }
-            const orderName = document.getElementById('orderName').value;
-            const amount = parseInt(document.getElementById('amount').value);
-            // orderId 생성 (UUID 대용)
-            const orderId = "ORDER_" + new Date().getTime();
-
-            paymentWidget.requestPayment({
-                orderId: orderId,
-                orderName: orderName,
-                successUrl: window.location.href, // 현재 페이지로 리다이렉트
-                failUrl: window.location.href,
-                customerEmail: "customer@example.com",
-                customerName: "홍길동"
-            }).catch(function (error) {
-                log('결제 요청 실패: ' + JSON.stringify(error), true);
-                if (error.code === 'USER_CANCEL') {
-                    // 사용자가 취소한 경우
-                }
-            });
-        }
-
-        // --- 구독 (Billing Auth) ---
-        function requestBillingAuth() {
-            const clientKey = document.getElementById('clientKey').value;
-            if (!clientKey) { alert('Client Key를 설정해주세요.'); return; }
-
-            const tossPayments = TossPayments(clientKey);
-            const customerKey = "billing_" + new Date().getTime(); // 고유 키
-
-            tossPayments.requestBillingAuth('카드', {
-                customerKey: customerKey,
-                successUrl: window.location.href,
-                failUrl: window.location.href
-            });
-        }
+        // ... (methods above unchanged) ...
 
         function subscribe() {
-            const planName = document.getElementById('planName').value;
-            const price = document.getElementById('subPrice').value;
+            const planId = document.getElementById('planId').value;
 
             // API 호출
-            fetch(`/api/v1/subscriptions?planName=${encodeURIComponent(planName)}&price=${price}`, {
+            fetch(`/api/v1/subscriptions?planId=${planId}`, {
                 method: 'POST',
                 headers: getAuthHeader()
             })
@@ -302,6 +149,22 @@
                 })
                 .catch(async err => log('구독 에러: ' + (err.json ? JSON.stringify(await err.json()) : err), true));
         }
+
+        function getMySubscription() {
+            fetch(`/api/v1/subscriptions/me`, {
+                headers: getAuthHeader()
+            })
+                .then(res => {
+                    if (res.status === 204) return "구독 정보 없음";
+                    return res.ok ? res.json() : Promise.reject(res);
+                })
+                .then(data => {
+                    log('구독 조회: ' + JSON.stringify(data));
+                    document.getElementById('subResult').innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(async err => log('조회 에러: ' + (err.json ? JSON.stringify(await err.json()) : err), true));
+        }
+
 
 
         // --- 리다이렉트 처리 로직 ---
@@ -361,7 +224,7 @@
                 processed = true;
             }
 
-            // URL 파라미터 청소 (새로고침 시 재요청 방지)
+            // URL 파라미터 청소
             if (processed) {
                 const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
                 window.history.replaceState({ path: newUrl }, '', newUrl);

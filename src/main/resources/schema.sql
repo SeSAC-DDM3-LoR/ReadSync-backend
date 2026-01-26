@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS "exp_rules" CASCADE;
 DROP TABLE IF EXISTS "get_exp_rules" CASCADE;
 DROP TABLE IF EXISTS "users" CASCADE;
 DROP TABLE IF EXISTS "subscriptions" CASCADE;
+DROP TABLE IF EXISTS "subscription_plans" CASCADE;
 DROP TABLE IF EXISTS "user_informations" CASCADE;
 DROP TABLE IF EXISTS "orders" CASCADE;
 DROP TABLE IF EXISTS "inquiry_answers" CASCADE;
@@ -350,11 +351,24 @@ CREATE TABLE "users" (
     CONSTRAINT "PK_USERS" PRIMARY KEY ("user_id")
 );
 
--- 22. Subscriptions
+-- 22. Subscriptions (김선준 수정 - 260126)
+-- 22-1. Subscription Plans
+CREATE TABLE "subscription_plans" (
+    "plan_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+    "plan_name" VARCHAR(50) NOT NULL,
+    "price" DECIMAL(10,0) NOT NULL,
+    "description" TEXT NULL,
+    "give_credit" INT DEFAULT 0 NULL,
+    "is_active" BOOLEAN DEFAULT TRUE NOT NULL,
+    "created_at" TIMESTAMP DEFAULT now() NOT NULL,
+    "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
+    CONSTRAINT "PK_SUBSCRIPTION_PLANS" PRIMARY KEY ("plan_id")
+);
+
+-- 22-2. Subscriptions
 CREATE TABLE "subscriptions" (
     "sub_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-    "plan_name" VARCHAR(50) NOT NULL,
-    "price" DECIMAL NOT NULL,
+    "plan_id" BIGINT NOT NULL,
     "status" VARCHAR(20) NOT NULL,
     "next_billing_date" TIMESTAMP NOT NULL,
     "started_at" TIMESTAMP NULL,
@@ -678,6 +692,7 @@ ALTER TABLE "orders" ADD CONSTRAINT "FK_users_TO_orders_1" FOREIGN KEY ("user_id
 ALTER TABLE "orders" ADD CONSTRAINT "FK_payment_methods_TO_orders_1" FOREIGN KEY ("method_id") REFERENCES "payment_methods" ("method_id");
 ALTER TABLE "orders" ADD CONSTRAINT "FK_subscriptions_TO_orders_1" FOREIGN KEY ("sub_id") REFERENCES "subscriptions" ("sub_id");
 ALTER TABLE "orders" ADD CONSTRAINT "FK_carts_TO_orders_1" FOREIGN KEY ("cart_id") REFERENCES "carts" ("cart_id");
+ALTER TABLE "subscriptions" ADD CONSTRAINT "FK_subscription_plans_TO_subscriptions_1" FOREIGN KEY ("plan_id") REFERENCES "subscription_plans" ("plan_id");
 ALTER TABLE "inquiry_answers" ADD CONSTRAINT "FK_users_TO_inquiry_answers_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "inquiry_answers" ADD CONSTRAINT "FK_inquiries_TO_inquiry_answers_1" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries" ("inquiry_id");
 ALTER TABLE "community_posts" ADD CONSTRAINT "FK_users_TO_community_posts_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");

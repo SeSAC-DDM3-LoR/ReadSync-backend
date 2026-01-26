@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,11 +25,9 @@ public class Subscription extends BaseTimeEntity {
     @Column(name = "sub_id")
     private Long subId;
 
-    @Column(name = "plan_name", nullable = false, length = 50)
-    private String planName;
-
-    @Column(name = "price", nullable = false)
-    private BigDecimal price;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id", nullable = false)
+    private SubscriptionPlan plan;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

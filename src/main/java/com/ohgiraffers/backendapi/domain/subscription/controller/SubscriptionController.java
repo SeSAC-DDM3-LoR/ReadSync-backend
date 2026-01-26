@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-
 /**
  * 구독 관련 API를 제공하는 컨트롤러 클래스입니다.
  */
@@ -26,9 +24,8 @@ public class SubscriptionController {
     @PostMapping
     public ResponseEntity<SubscriptionResponse> subscribe(
             @CurrentUserId Long userId,
-            @RequestParam String planName,
-            @RequestParam BigDecimal price) {
-        SubscriptionResponse response = subscriptionService.subscribe(userId, planName, price);
+            @RequestParam Long planId) {
+        SubscriptionResponse response = subscriptionService.subscribe(userId, planId);
         return ResponseEntity.ok(response);
     }
 
