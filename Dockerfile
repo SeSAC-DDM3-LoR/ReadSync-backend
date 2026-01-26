@@ -1,28 +1,31 @@
- # ----------------------------------------------------------------------
- # [핵심 변경]
- # docker.io (Docker Hub) -> public.ecr.aws (AWS 공식 미러)
- # 이렇게 하면 "Not found" 에러가 100% 사라집니다.
- # ----------------------------------------------------------------------
- FROM --platform=linux/amd64 public.ecr.aws/bitnami/postgresql:15
- 
- USER root
- 
- # AWS 미러의 Bitnami 이미지는 가끔 패키지 목록이 비어있을 수 있어서
- # 'apt-get update'를 강제로 먼저 해줘야 합니다.
- RUN apt-get update && apt-get install -y \
-     git \
-     make \
-     gcc \
-     postgresql-server-dev-15 \
-     && rm -rf /var/lib/apt/lists/*
- 
- # pgvector 빌드 및 설치 
- RUN git clone --branch v0.7.0 https://github.com/pgvector/pgvector.git \
-     && cd pgvector \
-     && make \
-     && make install \
-     && cd .. \
-     && rm -rf pgvector
- 
- USER 1001
+# -------------------------------------------------------------------
+# 1. 빌드 단계 (Builder Stage)
+# -------------------------------------------------------------------
+# Gradle과 Java 21이 포함된 이미지를 사용하여 빌드를 수행합니다.
+FROM gradle:8.5-jdk21-alpine AS builder
 
+WORKDIR /app
+
+# 의존성 캐싱을 위해 설정 파일만 먼저 복사
+COPY build.gradle settings.gradle ./
+# 라이브러리 다운로드 (소스코드 복사 전)
+RUN gradle dependencies --no-daemon || return 0
+
+# 전체 소스 복사 및 빌드 (테스트 제외하여 속도 향상)
+COPY . .
+RUN gradle clean build -x test --no-daemon
+
+# -------------------------------------------------------------------
+# 2. 실행 단계 (Run Stage)
+# -------------------------------------------------------------------
+# 실제 실행 시에는 가벼운 JDK 이미지만 필요합니다.
+FROM amazoncorretto:21-alpine-jdk
+
+WORKDIR /app
+
+# 빌드 단계에서 생성된 JAR 파일만 쏙 가져옵니다.
+# (경로가 정확한지 확인 필요, 보통 build/libs에 생성됨)
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+# 실행
+ENTRYPOINT ["java", "-jar", "app.jar"]
