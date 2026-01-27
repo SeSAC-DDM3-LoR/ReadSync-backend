@@ -3,6 +3,7 @@ package com.ohgiraffers.backendapi.domain.book.controller;
 import com.ohgiraffers.backendapi.domain.book.dto.BookRequestDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookResponseDTO;
 import com.ohgiraffers.backendapi.domain.book.service.BookService;
+import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -74,5 +75,13 @@ public class BookController {
             @RequestParam(name = "keyword") String keyword,
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(bookService.searchBooks(keyword, pageable));
+    }
+
+    @Operation(summary = "[공통] 구매한 도서 목록 조회", description = "로그인한 사용자가 구매한 도서 목록을 최신순으로 조회합니다.")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/purchased")
+    public ResponseEntity<List<BookResponseDTO>> getPurchasedBooks(
+            @Parameter(hidden = true) @CurrentUserId Long userId) {
+        return ResponseEntity.ok(bookService.getPurchasedBooks(userId));
     }
 }

@@ -72,7 +72,7 @@ INSERT INTO "blacklists" ("user_id", "type", "reason", "start_date", "end_date",
 
 -- [9] Books (도서 정보 - Category 참조)
 INSERT INTO "books" ("category_id", "title", "author", "summary", "price", "language") VALUES
-                                                                                           (1, '데이터베이스의 이해', '강작가', 'SQL과 DB 설계의 기초', 25000, 'KOREAN'),
+                                                                                           (1, '만세전', '염상섭', '3.1운동이 일어나기 전해 겨울, 동경 유학 중인 주인공 ''나''는 아내가 위독하다는 전보를 받고 급히 귀국 준비를 한다. 그러나 주인공은 아내의 생사에 무덤덤하며, 오히려 귀국을 핑계로 시험을 피하게 된 것을 다행으로 여기는 냉소적인 태도를 보인다. 귀국 전, 그는 단골 카페인 M헌에 들러 친하게 지내던 P자와 정자(시즈코)를 만난다. 정자에게 선물을 주며 미묘한 감정을 나누고, 자신의 이중적인 심리와 허위의식을 자조한다. 밤늦게 동경역에서 친구 X군과 함께 기차에 오르려는 순간, 정자가 배웅을 나와 선물을 건네고 주인공은 묘한 여운을 남기며 기차에 오른다.', 25000, 'KOREAN'),
                                                                                            (2, '자바 프로그래밍 마스터', '이코딩', '실전 예제로 배우는 Java', 32000, 'KOREAN'),
                                                                                            (1, 'AI와 미래 사회', '박지능', '인공지능이 바꿀 미래', 18000, 'KOREAN');
 
@@ -84,11 +84,16 @@ INSERT INTO "book_vectors" ("book_id", "vector", "created_at") VALUES
 
 -- [11] Chapters (챕터 정보 - Book 참조)
 INSERT INTO "chapters" ("book_id", "chapter_name", "sequence", "book_content_path", paragraphs) VALUES
-                                                                                                    (1, '1장: 관계형 모델', 1, 'https://drive.google.com/file/d/16LgsOHk6FwihTrLuLVH_5Cqx8Q_KyOU5/view?usp=drive_link', -1),
-                                                                                                    (1, '2장: 정규화', 2, '/path/db_ch2', -1),
+                                                                                                    (1, '1장', 1, 'https://drive.google.com/file/d/1GKS0nTkwUaH07YRAY0U0Tt0S6p-j_rD7/view?usp=sharing', 209),
+                                                                                                    (1, '2장', 2, 'https://drive.google.com/file/d/1EV21SYFQ4JAMfoWmiemz9Nc7a38us982/view?usp=sharing', 163),
+                                                                                                    (1, '3장', 3, 'https://drive.google.com/file/d/19ys8OlK3U9J3OiMO4m55CIQ4Fi8nhAU9/view?usp=sharing', 139),
+                                                                                                    (1, '4장', 4, 'https://drive.google.com/file/d/1L7Hbd27mVLx2UEErAj_T_qeaR3dLae4m/view?usp=sharing', 45),
+                                                                                                    (2, '2장: 정규화', 2, '/path/db_ch2', -1),
                                                                                                     (2, '1장: 자바 입문', 1, '/path/java_ch1', -1),
                                                                                                     (2, '2장: 객체지향', 2, '/path/java_ch2', -1),
-                                                                                                    (3, '1장: AI의 역사', 1, '/path/ai_ch1', -1);
+                                                                                                    (3, '1장: AI의 역사', 1, '/path/ai_ch1', -1),
+                                                                                                    (3, '2장: AI의 역사', 1, '/path/ai_ch2', -1),
+                                                                                                    (3, '3장: AI의 역사', 1, '/path/ai_ch3', -1);
 
 -- [12] Chapter Vectors (챕터 벡터 - Chapter 참조)
 INSERT INTO "chapter_vectors" ("chapter_id", "vector", "created_at") VALUES

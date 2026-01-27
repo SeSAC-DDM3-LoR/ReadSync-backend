@@ -81,6 +81,9 @@ dependencies {
 
     // AWS S3 - 김선준 추가(버전은 적절한 버전으로 자유롭게 변경하세요.)
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.2.1'
+
+    // Hypersistence Utils (PostgreSQL Array Type Support) - 김선준 추가
+    implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.9.0'
 }
 
 tasks.named('test') {

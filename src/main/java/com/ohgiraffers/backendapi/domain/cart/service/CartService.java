@@ -7,6 +7,7 @@ import com.ohgiraffers.backendapi.domain.cart.dto.CartResponse;
 import com.ohgiraffers.backendapi.domain.cart.dto.CartUpdateRequest;
 import com.ohgiraffers.backendapi.domain.cart.entity.Cart;
 import com.ohgiraffers.backendapi.domain.cart.repository.CartRepository;
+import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.error.CustomException;
@@ -31,6 +32,7 @@ public class CartService {
     private final CartRepository cartRepository;
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
+    private final LibraryRepository libraryRepository;
 
     /**
      * 장바구니에 항목을 추가합니다. 이미 존재하는 경우 수량을 합산합니다.
@@ -46,6 +48,11 @@ public class CartService {
 
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOK_NOT_FOUND));
+
+        // 이미 소유한 책인지 확인
+        if (libraryRepository.existsByUserIdAndBook_BookId(userId, request.getBookId())) {
+            throw new CustomException(ErrorCode.ALREADY_OWNED_BOOK);
+        }
 
         // 이미 장바구니에 해당 책이 있는지 확인
         Optional<Cart> existingCartOpt = cartRepository.findByUserAndBook_BookId(user, request.getBookId());

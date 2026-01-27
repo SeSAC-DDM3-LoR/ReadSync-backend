@@ -13,5 +13,9 @@ public interface LibraryRepository extends JpaRepository<Library, Long> {
     Page<Library> findAllByUserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
 
     // 유저의 서재 내 특정 카테고리 도서 페이징 조회
-    Page<Library> findAllByUserIdAndBook_Category_CategoryIdAndDeletedAtIsNull(Long userId, Long categoryId, Pageable pageable);
+    Page<Library> findAllByUserIdAndBook_Category_CategoryIdAndDeletedAtIsNull(Long userId, Long categoryId,
+            Pageable pageable);
+
+    // 해당 책을 이미 소유하고 있는지 확인
+    boolean existsByUserIdAndBook_BookId(Long userId, Long bookId);
 }
