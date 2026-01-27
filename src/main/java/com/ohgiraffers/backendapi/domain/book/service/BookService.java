@@ -6,6 +6,7 @@ import com.ohgiraffers.backendapi.domain.book.entity.Book;
 import com.ohgiraffers.backendapi.domain.book.repository.BookRepository;
 import com.ohgiraffers.backendapi.domain.category.entity.Category;
 import com.ohgiraffers.backendapi.domain.category.repository.CategoryRepository;
+import com.ohgiraffers.backendapi.domain.order.enums.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -73,6 +74,7 @@ public class BookService {
 
     /**
      * 도서 키워드 검색
+     * 
      * @param keyword 검색어 (제목 또는 저자)
      * @return 검색된 도서 DTO 리스트
      */
@@ -83,6 +85,19 @@ public class BookService {
         }
         return bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(keyword, keyword, pageable)
                 .map(BookResponseDTO::from);
+    }
+
+    /**
+     * 구매한 책 목록 조회
+     * 
+     * @param userId 사용자 ID
+     * @return 구매한 도서 DTO 리스트
+     */
+    public List<BookResponseDTO> getPurchasedBooks(Long userId) {
+        return bookRepository.findPurchasedBooks(userId, OrderStatus.COMPLETED)
+                .stream()
+                .map(BookResponseDTO::from)
+                .toList();
     }
 
 }
