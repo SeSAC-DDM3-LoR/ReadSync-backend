@@ -63,6 +63,7 @@ public enum ErrorCode {
 
     // 서재
     LIBRARY_NOT_FOUND(HttpStatus.NOT_FOUND, "L001", "서재에 존재하지 않는 책입니다."),
+    ALREADY_OWNED_BOOK(HttpStatus.CONFLICT, "L002", "이미 소유하고 있는 책입니다."),
 
     // 독서룸
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 독서룸입니다."),
