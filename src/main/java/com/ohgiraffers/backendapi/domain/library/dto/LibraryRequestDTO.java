@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @Getter
 @Builder
 public class LibraryRequestDTO {
-    private Long userId;
     private Long bookId;
     private OwnershipType ownershipType;
     private int rentalDays;

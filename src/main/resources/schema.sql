@@ -47,6 +47,8 @@ DROP TABLE IF EXISTS "user_vectors" CASCADE;
 DROP TABLE IF EXISTS "book_vectors" CASCADE;
 DROP TABLE IF EXISTS "chapter_vectors" CASCADE;
 DROP TABLE IF EXISTS "chapter_vectors_rag" CASCADE;
+DROP TABLE IF EXISTS "rag_child_vectors" CASCADE;
+DROP TABLE IF EXISTS "rag_parent_documents" CASCADE;
 
 -- 1. Notices
 CREATE TABLE "notices" (
@@ -621,21 +623,36 @@ CREATE TABLE "chapter_vectors" (
 );
 
 -- 42. Chapter Vectors RAG (260125 : 추가)
-CREATE TABLE "chapter_vectors_rag" (
-    "rag_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+-- 42. RAG (Parent-Document Retriever)
+-- 42. RAG (Parent-Document Retriever)
+CREATE TABLE "rag_parent_documents" (
+    "parent_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "chapter_id" BIGINT NOT NULL,
+    "content_text" TEXT NOT NULL,
+    "speaker_list" TEXT[] NULL,
+    "paragraph_ids" TEXT[] NULL,
+    "start_paragraph_id" VARCHAR(50) NOT NULL,
+    "end_paragraph_id" VARCHAR(50) NOT NULL,
+    "created_at" TIMESTAMP DEFAULT Now() NOT NULL,
+    CONSTRAINT "PK_RAG_PARENT_DOCUMENTS" PRIMARY KEY ("parent_id")
+);
+
+CREATE TABLE "rag_child_vectors" (
+    "child_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+    "parent_id" BIGINT NOT NULL,
     "vector" HALFVEC(1024) NULL,
-    "content_chunk" TEXT NOT NULL,
+    "content_text" TEXT NOT NULL,
     "chunk_index" INT NOT NULL,
     "paragraph_ids" TEXT[] NULL,
     "created_at" TIMESTAMP DEFAULT Now() NOT NULL,
-    CONSTRAINT "PK_CHAPTER_VECTORS_RAG" PRIMARY KEY ("rag_id")
+    CONSTRAINT "PK_RAG_CHILD_VECTORS" PRIMARY KEY ("child_id")
 );
 
 -- FK 설정 (기존과 동일)
 ALTER TABLE "book_vectors" ADD CONSTRAINT "FK_books_TO_book_vectors_1" FOREIGN KEY ("book_id") REFERENCES "books" ("book_id");
 ALTER TABLE "chapter_vectors" ADD CONSTRAINT "FK_chapters_TO_chapter_vectors_1" FOREIGN KEY ("chapter_id") REFERENCES "chapters" ("chapter_id");
-ALTER TABLE "chapter_vectors_rag" ADD CONSTRAINT "FK_chapters_TO_chapter_vectors_rag_1" FOREIGN KEY ("chapter_id") REFERENCES "chapters" ("chapter_id");
+ALTER TABLE "rag_parent_documents" ADD CONSTRAINT "FK_chapters_TO_rag_parent_documents" FOREIGN KEY ("chapter_id") REFERENCES "chapters" ("chapter_id");
+ALTER TABLE "rag_child_vectors" ADD CONSTRAINT "FK_rag_parent_documents_TO_rag_child_vectors" FOREIGN KEY ("parent_id") REFERENCES "rag_parent_documents" ("parent_id");
 ALTER TABLE "user_vectors" ADD CONSTRAINT "FK_users_TO_user_vectors_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "FK_users_TO_refresh_tokens_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "notices" ADD CONSTRAINT "FK_users_TO_notices_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");

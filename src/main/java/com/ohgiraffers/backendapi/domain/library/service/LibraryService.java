@@ -29,8 +29,8 @@ public class LibraryService {
     private final BookRepository bookRepository;
 
     @Transactional
-    public Long addToLibrary(LibraryRequestDTO request) {
-        User user = userRepository.findById(request.getUserId())
+    public Long addToLibrary(Long userId, LibraryRequestDTO request) {
+        User user = userRepository.findById(userId)
                 .filter(u -> u.getDeletedAt() == null)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
 
