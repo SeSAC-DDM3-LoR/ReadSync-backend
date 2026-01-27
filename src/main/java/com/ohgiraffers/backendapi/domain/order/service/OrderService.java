@@ -2,6 +2,10 @@ package com.ohgiraffers.backendapi.domain.order.service;
 
 import com.ohgiraffers.backendapi.domain.cart.entity.Cart;
 import com.ohgiraffers.backendapi.domain.cart.repository.CartRepository;
+import com.ohgiraffers.backendapi.domain.library.entity.Library;
+import com.ohgiraffers.backendapi.domain.library.enums.OwnershipType;
+import com.ohgiraffers.backendapi.domain.library.enums.ReadingStatus;
+import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
 import com.ohgiraffers.backendapi.domain.order.entity.Order;
 import com.ohgiraffers.backendapi.domain.order.entity.OrderItem;
 import com.ohgiraffers.backendapi.domain.order.enums.OrderItemStatus;
@@ -40,6 +44,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final PaymentHistoryRepository paymentHistoryRepository;
+    private final LibraryRepository libraryRepository;
 
     /**
      * 장바구니 항목들을 기반으로 주문을 생성합니다. (일반 결제 성공 후 호출)
@@ -113,6 +118,18 @@ public class OrderService {
                     .status(OrderItemStatus.ORDER_COMPLETED)
                     .build();
             orderItemRepository.save(orderItem);
+
+            // 2. Library에 추가 (이미 존재하지 않는 경우에만)
+            if (!libraryRepository.existsByUserIdAndBook_BookId(user.getId(), item.getBook().getBookId())) {
+                Library library = Library.builder()
+                        .user(user)
+                        .book(item.getBook())
+                        .ownershipType(OwnershipType.OWNED)
+                        .readingStatus(ReadingStatus.BEFORE_READING)
+                        .totalProgress(BigDecimal.ZERO)
+                        .build();
+                libraryRepository.save(library);
+            }
         }
 
         // 장바구니 비우기
