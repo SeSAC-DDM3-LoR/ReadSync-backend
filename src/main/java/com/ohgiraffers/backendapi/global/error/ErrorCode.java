@@ -113,7 +113,8 @@ public enum ErrorCode {
     RAG_INVALID_DRIVE_LINK(HttpStatus.BAD_REQUEST, "RAG001", "유효하지 않은 구글 드라이브 링크입니다."),
     RAG_CONTENT_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "RAG002", "파일 내용을 파싱하는 중 오류가 발생했습니다."),
     RAG_UNSUPPORTED_URL(HttpStatus.BAD_REQUEST, "RAG003", "지원하지 않는 URL 형식입니다."),
-    RAG_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "RAG004", "다운로드된 데이터에 'content' 필드가 없습니다.");
+    RAG_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "RAG004", "다운로드된 데이터에 'content' 필드가 없습니다."),
+    RAG_EMBEDDING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "RAG005", "임베딩 생성에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;

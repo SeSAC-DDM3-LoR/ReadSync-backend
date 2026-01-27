@@ -224,4 +224,39 @@ public class ChapterVectorRagService {
         chapterRepository.save(chapter);
         log.info("✅ Chapter ID: {} 상태 업데이트 완료 (isEmbedded = true)", chapter.getChapterId());
     }
+
+    @Transactional(readOnly = true)
+    public List<com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagSearchResponseDTO> searchRag(Long chapterId,
+            String query) {
+        // 1. Query Vectorization
+        List<Float> queryVector = callEmbeddingQueryServer(query);
+
+        // 2. Search DB (convert List<Float> to String for native query)
+        String vectorString = queryVector.toString();
+        List<RagChildVector> children = ragChildRepository.findTop5ByVectorSimilarity(chapterId, vectorString);
+
+        // 3. Fetch Parents (Deduplicate) & Map to DTO
+        return children.stream()
+                .map(RagChildVector::getParent)
+                .distinct()
+                .map(com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagSearchResponseDTO::from) // Entity -> DTO 변환
+                .collect(Collectors.toList());
+    }
+
+    private List<Float> callEmbeddingQueryServer(String text) {
+        Map<String, String> request = java.util.Collections.singletonMap("text", text);
+        // Response format: { "embedding": [ ... ] }
+        Map<String, List<Float>> response = embeddingServerWebClient.post()
+                .uri("/api/v1/embed-query")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, List<Float>>>() {
+                })
+                .block(Duration.ofSeconds(30));
+
+        if (response == null || !response.containsKey("embedding")) {
+            throw new CustomException(ErrorCode.RAG_EMBEDDING_FAILED);
+        }
+        return response.get("embedding");
+    }
 }
