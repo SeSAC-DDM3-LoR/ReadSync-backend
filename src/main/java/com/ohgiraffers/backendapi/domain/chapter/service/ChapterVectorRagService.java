@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagEmbeddingRequestDTO;
 import com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagEmbeddingResponseDTO;
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
-import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVectorRag;
+import com.ohgiraffers.backendapi.domain.chapter.entity.RagChildVector;
+import com.ohgiraffers.backendapi.domain.chapter.entity.RagParentDocument;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
-import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterVectorRagRepository;
+import com.ohgiraffers.backendapi.domain.chapter.repository.RagChildRepository;
+import com.ohgiraffers.backendapi.domain.chapter.repository.RagParentRepository;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import io.awspring.cloud.s3.S3Template;
@@ -34,7 +36,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChapterVectorRagService {
 
-    private final ChapterVectorRagRepository chapterVectorRagRepository;
+    private final RagParentRepository ragParentRepository;
+    private final RagChildRepository ragChildRepository;
     private final ChapterRepository chapterRepository;
     private final WebClient embeddingServerWebClient;
     private final S3Template s3Template;
@@ -74,11 +77,11 @@ public class ChapterVectorRagService {
             // 3. Python AI 서버 호출
             RagEmbeddingResponseDTO response = callEmbeddingServer(contentList);
 
-            // 4. 결과 DB 저장 (기존 데이터 삭제 후 재저장 또는 업서트 전략)
+            // 4. 결과 DB 저장 (기존 데이터 삭제 후 재저장)
             saveEmbeddingsToDatabase(chapter, response);
 
-            log.info("✅ RAG 임베딩 완료 - Chapter ID: {}, Chunk Count: {}",
-                    chapterId, response.getEmbeddings().size());
+            int parentCount = (response.getParents() != null) ? response.getParents().size() : 0;
+            log.info("✅ RAG 임베딩 완료 - Chapter ID: {}, Parent Count: {}", chapterId, parentCount);
 
         } catch (Exception e) {
             log.error("❌ RAG 임베딩 처리 중 오류 발생 - ID: {}, 사유: {}", chapterId, e.getMessage(), e);
@@ -141,35 +144,10 @@ public class ChapterVectorRagService {
             bucket = uri.getHost();
             key = uri.getPath().substring(1); // remove leading slash
         } else {
-            // Assuming format like https://bucket.s3.region.amazonaws.com/key or similar
-            // This parsing depends heavily on URL format.
-            // Simple fallback: if stored as just path or specific convention, adjust here.
-            // Given user said "actual AWS S3 URL", let's try to extract bucket/key.
-
-            // For robust S3Template usage, we normally need bucket and key.
-            // Let's assume standard URL structure or that we can pass the logic handled by
-            // AWS SDK if we use S3Resource.
-            // But S3Template methods usually take bucket and key.
-
-            // If the URL is full HTTP URL, parsing might be complex.
-            // Let's assume standard parsing logic or try to read as a Resource if
-            // S3Template supports S3ProtocolResolver.
-            // However, for S3Template.download, we need bucket & key.
-
-            // IMPORTANT: User's logic in Python was:
-            // bucket_name = parsed_url.netloc.split('.')[0]
-            // key = parsed_url.path.lstrip('/')
-            // We can mimic this if the hostname is bucket.s3...
-
             String host = uri.getHost();
             if (host != null && host.contains(".s3")) {
                 bucket = host.split("\\.")[0];
             } else {
-                // fallback or specific logic needed
-                // If using 's3://' style stored in DB, scheme is s3.
-                // If DB has http link, we try to parse.
-                // If it fails, we might just try to use RestTemplate to download if public?
-                // But user implied secured S3.
                 throw new CustomException(ErrorCode.RAG_UNSUPPORTED_URL);
             }
             key = uri.getPath().substring(1);
@@ -185,6 +163,7 @@ public class ChapterVectorRagService {
     }
 
     private RagEmbeddingResponseDTO callEmbeddingServer(List<Map<String, Object>> contentList) {
+        log.info("📤 Python 서버로 {} 개의 콘텐츠 노드를 전송합니다.", contentList.size());
         return embeddingServerWebClient.post()
                 .uri("/api/v1/embed-rag-content")
                 .bodyValue(new RagEmbeddingRequestDTO(contentList))
@@ -197,19 +176,52 @@ public class ChapterVectorRagService {
 
     @Transactional
     protected void saveEmbeddingsToDatabase(Chapter chapter, RagEmbeddingResponseDTO response) {
-        // 기존 RAG 데이터 정리 (재임베딩 시)
-        chapterVectorRagRepository.deleteByChapter_ChapterId(chapter.getChapterId());
+        // 1. 기존 RAG 데이터 정리 (재임베딩 시)
+        List<RagParentDocument> existingParents = ragParentRepository.findByChapterId(chapter.getChapterId());
 
-        List<ChapterVectorRag> entities = response.getEmbeddings().stream()
-                .map(dto -> ChapterVectorRag.builder()
-                        .chapter(chapter)
-                        .contentChunk(dto.getContentChunk())
-                        .chunkIndex(dto.getChunkIndex())
-                        .vector(dto.getVector())
-                        .paragraphIds(dto.getParagraphIds())
-                        .build())
-                .collect(Collectors.toList());
+        if (!existingParents.isEmpty()) {
+            // Child 먼저 삭제 (FK 제약조건 때문 - 명시적 삭제가 안전함)
+            ragChildRepository.deleteByParentIn(existingParents);
+            // Parent 삭제
+            ragParentRepository.deleteAll(existingParents);
+        }
 
-        chapterVectorRagRepository.saveAll(entities);
+        // 2. 신규 데이터 저장
+        if (response.getParents() == null || response.getParents().isEmpty()) {
+            log.warn("임베딩 결과가 없습니다. Chapter ID: {}", chapter.getChapterId());
+            return;
+        }
+
+        for (RagEmbeddingResponseDTO.ParentChunkDTO parentDto : response.getParents()) {
+            RagParentDocument parent = RagParentDocument.builder()
+                    .chapterId(chapter.getChapterId())
+                    .contentText(parentDto.getContentText())
+                    .speakerList(parentDto.getSpeakerList())
+                    .paragraphIds(parentDto.getParagraphIds())
+                    .startParagraphId(parentDto.getStartParagraphId())
+                    .endParagraphId(parentDto.getEndParagraphId())
+                    .build();
+
+            RagParentDocument savedParent = ragParentRepository.save(parent);
+
+            if (parentDto.getChildren() != null) {
+                List<RagChildVector> children = parentDto.getChildren().stream()
+                        .map(childDto -> RagChildVector.builder()
+                                .parent(savedParent) // 연관관계 설정
+                                .contentText(childDto.getContentText())
+                                .vector(childDto.getVector())
+                                .chunkIndex(childDto.getChunkIndex())
+                                .paragraphIds(childDto.getParagraphIds())
+                                .build())
+                        .collect(Collectors.toList());
+
+                ragChildRepository.saveAll(children);
+            }
+        }
+
+        // 3. Chapter 상태 업데이트 (임베딩 완료)
+        chapter.markAsEmbedded();
+        chapterRepository.save(chapter);
+        log.info("✅ Chapter ID: {} 상태 업데이트 완료 (isEmbedded = true)", chapter.getChapterId());
     }
 }

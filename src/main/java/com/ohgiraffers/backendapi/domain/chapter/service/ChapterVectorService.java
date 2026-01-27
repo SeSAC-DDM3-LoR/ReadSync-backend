@@ -40,7 +40,8 @@ public class ChapterVectorService {
                 .timeout(Duration.ofSeconds(60))
                 // 2. 서버가 일어날 때까지 30초 간격으로 최대 5번만 다시 물어보기
                 .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(30))
-                        .doBeforeRetry(retrySignal -> log.warn("💤 서버 깨우는 중... (시도: {})", retrySignal.totalRetries() + 1)))
+                        .doBeforeRetry(
+                                retrySignal -> log.warn("💤 서버 깨우는 중... (시도: {})", retrySignal.totalRetries() + 1)))
                 // 3. 전체적으로 최대 5분까지는 기다려주기
                 .block(Duration.ofMinutes(5));
     }
@@ -58,7 +59,8 @@ public class ChapterVectorService {
                 .timeout(Duration.ofSeconds(60))
                 // 2. 서버가 일어날 때까지 30초 간격으로 최대 5번만 다시 물어보기
                 .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(30))
-                        .doBeforeRetry(retrySignal -> log.warn("💤 서버 깨우는 중... (시도: {})", retrySignal.totalRetries() + 1)))
+                        .doBeforeRetry(
+                                retrySignal -> log.warn("💤 서버 깨우는 중... (시도: {})", retrySignal.totalRetries() + 1)))
                 // 3. 전체적으로 최대 5분까지는 기다려주기
                 .block(Duration.ofMinutes(5));
     }
