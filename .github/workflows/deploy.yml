@@ -1,27 +1,23 @@
 name: ReadSync Backend CI/CD
 
-# 워크플로우가 실행될 조건
+# main 브랜치에 push될 때만 실행
 on:
   push:
-    branches:
-      - main      # main 브랜치에 push될 때
-      - develop   # develop 브랜치에 push될 때
-  pull_request:
-    branches:
-      - main
-      - develop
+    branches: [ "main" ]
 
 # 환경 변수 설정
 env:
   JAVA_VERSION: '21'
-  GRADLE_VERSION: '8.5'
+  AWS_REGION: 'ap-northeast-2'
+  EB_APPLICATION_NAME: 'readsync-server'
+  EB_ENVIRONMENT_NAME: 'Readsync-server-env'
 
 jobs:
   # ========================================
-  # Job 1: 빌드 및 테스트
+  # 빌드, 테스트 및 EB 배포
   # ========================================
-  build-and-test:
-    name: Build and Test
+  build-deploy:
+    name: Build and Deploy to Elastic Beanstalk
     runs-on: ubuntu-latest
     
     steps:
@@ -29,11 +25,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Java 21 설정
+      # 2. Java 21 설정 (Amazon Corretto)
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'corretto'  # Amazon Corretto (Dockerfile과 동일)
+          distribution: 'corretto'
           java-version: ${{ env.JAVA_VERSION }}
           cache: 'gradle'
 
@@ -41,7 +37,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 4. Gradle 의존성 캐싱
+      # 4. Gradle 의존성 캐싱 (빌드 속도 향상)
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -52,128 +48,55 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 5. 빌드 (테스트 포함)
+      # 5. 빌드 (테스트 포함 - 안정성 확보)
+      # 테스트 제외하려면: ./gradlew clean build -x test --no-daemon
       - name: Build with Gradle
         run: ./gradlew clean build --no-daemon
         env:
-          SPRING_PROFILES_ACTIVE: test
+          SPRING_PROFILES_ACTIVE: prod
 
-      # 6. 테스트 결과 업로드
+      # 6. 테스트 결과 업로드 (실패 시 디버깅용)
       - name: Upload test results
-        if: always()  # 테스트 실패해도 결과 업로드
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: build/test-results/
+          retention-days: 7
 
-      # 7. 빌드된 JAR 파일 업로드 (배포 Job에서 사용)
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-jar
-          path: build/libs/*.jar
-          retention-days: 1
-
-  # ========================================
-  # Job 2: Docker 이미지 빌드 및 푸시
-  # ========================================
-  docker-build:
-    name: Build and Push Docker Image
-    runs-on: ubuntu-latest
-    needs: build-and-test  # 빌드/테스트 성공 후 실행
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    
-    steps:
-      # 1. 코드 체크아웃
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 2. Docker Buildx 설정 (멀티 플랫폼 빌드 지원)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 3. Docker Hub 로그인
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # 4. 브랜치별 태그 설정
-      - name: Set Docker tag
-        id: docker-tag
+      # 7. EB 배포 패키지 생성
+      # EB Docker 플랫폼은 Dockerfile + JAR 파일이 필요
+      - name: Generate deployment package
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "tag=latest" >> $GITHUB_OUTPUT
-            echo "env=prod" >> $GITHUB_OUTPUT
-          else
-            echo "tag=develop" >> $GITHUB_OUTPUT
-            echo "env=dev" >> $GITHUB_OUTPUT
-          fi
+          mkdir -p deploy
+          cp Dockerfile deploy/
+          cp build/libs/*.jar deploy/
+          cd deploy
+          zip -r ../deploy.zip .
+          cd ..
+          ls -lh deploy.zip
 
-      # 5. Docker 이미지 빌드 및 푸시
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      # 8. Elastic Beanstalk 배포
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
         with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/readsync-backend:${{ steps.docker-tag.outputs.tag }}
-            ${{ secrets.DOCKER_USERNAME }}/readsync-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ env.EB_APPLICATION_NAME }}
+          environment_name: ${{ env.EB_ENVIRONMENT_NAME }}
+          version_label: v${{ github.run_number }}-${{ github.sha }}
+          region: ${{ env.AWS_REGION }}
+          deployment_package: deploy.zip
+          wait_for_deployment: true
+          wait_for_environment_recovery: 300
 
-  # ========================================
-  # Job 3: 서버 배포 (선택사항)
-  # ========================================
-  deploy:
-    name: Deploy to Server
-    runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-      # 1. 코드 체크아웃
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 2. SSH를 통한 서버 배포
-      - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USERNAME }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          script: |
-            # Docker 이미지 pull
-            docker pull ${{ secrets.DOCKER_USERNAME }}/readsync-backend:latest
-            
-            # 기존 컨테이너 중지 및 제거
-            docker stop readsync-backend || true
-            docker rm readsync-backend || true
-            
-            # 새 컨테이너 실행
-            docker run -d \
-              --name readsync-backend \
-              --restart unless-stopped \
-              -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e SPRING_DATASOURCE_URL=${{ secrets.DB_URL }} \
-              -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e SPRING_DATA_REDIS_HOST=${{ secrets.REDIS_HOST }} \
-              -e SPRING_DATA_REDIS_PORT=${{ secrets.REDIS_PORT }} \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              ${{ secrets.DOCKER_USERNAME }}/readsync-backend:latest
-            
-            # 사용하지 않는 이미지 정리
-            docker image prune -af
-
-      # 3. 배포 완료 알림 (선택사항 - Slack, Discord 등)
-      - name: Notify deployment status
+      # 9. 배포 완료 알림
+      - name: Deployment notification
         if: always()
         run: |
-          echo "Deployment completed with status: ${{ job.status }}"
-          # 여기에 Slack/Discord webhook 추가 가능
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ 배포 성공! Environment: ${{ env.EB_ENVIRONMENT_NAME }}"
+            echo "🚀 Version: v${{ github.run_number }}-${{ github.sha }}"
+          else
+            echo "❌ 배포 실패! 로그를 확인하세요."
+          fi
