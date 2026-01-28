@@ -14,9 +14,16 @@ TRUNCATE TABLE
 
 -- [1] Levels (기초 레벨 정보)
 INSERT INTO "levels" ("required_exp", "max_comment_limit", "can_upload_image") VALUES
-                                                                                   (0, 30, FALSE),
-                                                                                   (1000, 50, FALSE),
-                                                                                   (5000, 100, TRUE);
+                                                                                   (0, 30, FALSE),       -- Level 1 (시작)
+                                                                                   (100, 40, FALSE),     -- Level 2
+                                                                                   (200, 50, FALSE),     -- Level 3
+                                                                                   (400, 60, FALSE),     -- Level 4
+                                                                                   (800, 70, FALSE),     -- Level 5
+                                                                                   (1600, 80, TRUE),     -- Level 6
+                                                                                   (3200, 100, TRUE),    -- Level 7
+                                                                                   (6400, 150, TRUE),    -- Level 8
+                                                                                   (12800, 200, TRUE),   -- Level 9
+                                                                                   (25600, 300, TRUE);   -- Level 10                                                                         (5000, 100, TRUE);
 
 -- [2] Categories (도서/활동 카테고리)
 INSERT INTO "categories" ("category_name") VALUES
