@@ -44,17 +44,40 @@ public class Bookmark extends BaseTimeEntity {
     @JoinColumn(name = "library_id", nullable = false)
     private Library library;
 
-    public void syncReadStatus(List<Integer> newIndices, Integer lastReadPos) {
-        String updatedMask = getString(newIndices);
-        this.readMask = updatedMask.getBytes(StandardCharsets.UTF_8);
+    public int syncReadStatus(List<Integer> newIndices, Integer lastReadPos) {
+
+        String currentMask = new String(this.readMask, StandardCharsets.UTF_8);
+        StringBuilder sb = new StringBuilder(currentMask);
+
+        int newlyReadCount = 0; // 이번 호출에서 처음 읽게 된 문단 수
+
+        for (Integer index : newIndices) {
+            if (index < 1 || index > chapter.getParagraphs()) {
+                throw new IllegalArgumentException(
+                        String.format("잘못된 문단 번호: %d (1 ~ %d)", index, chapter.getParagraphs())
+                );
+            }
+
+            int setIndex = index - 1;
+            // 기존에 '0'이었을 때만 '1'로 바꾸고 카운트를 올립니다 (중복 반영 방지)
+            if (sb.charAt(setIndex) == '0') {
+                sb.setCharAt(setIndex, '1');
+                newlyReadCount++;
+            }
+        }
+
+//        String updatedMask = getString(newIndices);
+        this.readMask = sb.toString().getBytes(StandardCharsets.UTF_8);
         this.lastReadPos = lastReadPos;
 
         // 2. 진행률 계산
-        long readCount = updatedMask.chars().filter(ch -> ch == '1').count();
+        long readCount = sb.chars().filter(ch -> ch == '1').count();
         this.progress = BigDecimal.valueOf(readCount)
                 .divide(BigDecimal.valueOf(chapter.getParagraphs()), 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
+
+        return newlyReadCount;
     }
 
     private String getString(List<Integer> newIndices) {

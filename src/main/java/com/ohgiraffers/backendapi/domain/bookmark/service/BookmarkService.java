@@ -12,6 +12,7 @@ import com.ohgiraffers.backendapi.domain.library.entity.Library;
 import com.ohgiraffers.backendapi.domain.library.enums.ReadingStatus;
 import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
 import com.ohgiraffers.backendapi.domain.library.service.LibraryService;
+import com.ohgiraffers.backendapi.domain.user.service.UserPreferenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +34,7 @@ public class BookmarkService {
     private final LibraryService libraryService;
     private final LibraryRepository libraryRepository;
     private final ChapterRepository chapterRepository;
+    private final UserPreferenceService  userPreferenceService;
 
     @Transactional
     public Long saveOrUpdate(BookmarkRequestDTO dto) {
@@ -52,7 +54,15 @@ public class BookmarkService {
                     return bookmarkRepository.save(dto.toEntity(library, chapter, maskBytes));
                 });
 
-        bookmark.syncReadStatus(dto.getReadParagraphIndices(), dto.getLastReadPos());
+        int newlyReadCount = bookmark.syncReadStatus(dto.getReadParagraphIndices(), dto.getLastReadPos());
+        if (newlyReadCount > 0) {
+            userPreferenceService.updatePreferenceByIncrement(
+                    bookmark.getLibrary().getUser().getId(),
+                    chapter.getChapterId(),
+                    newlyReadCount,
+                    chapter.getParagraphs()
+            );
+        }
         return bookmark.getBookmarkId();
     }
 
