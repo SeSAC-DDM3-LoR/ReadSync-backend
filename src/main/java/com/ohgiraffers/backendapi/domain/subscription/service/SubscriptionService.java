@@ -67,10 +67,27 @@ public class SubscriptionService {
                                         throw new CustomException(ErrorCode.ALREADY_SUBSCRIBED);
                                 });
 
-                // 등록된 결제 수단 확인
-                PaymentMethod paymentMethod = paymentMethodRepository.findByUserAndIsDefaultTrueAndDeletedAtIsNull(user)
-                                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_METHOD_NOT_FOUND));
+                // 등록된 결제 수단 확인 (중복 방지 처리)
+                List<PaymentMethod> paymentMethods = paymentMethodRepository
+                                .findByUserAndIsDefaultTrueAndDeletedAtIsNullOrderByCreatedAtDesc(user);
 
+                if (paymentMethods.isEmpty()) {
+                        throw new CustomException(ErrorCode.PAYMENT_METHOD_NOT_FOUND);
+                }
+
+                // 가장 최근 등록된 기본 결제 수단 사용
+                PaymentMethod paymentMethod = paymentMethods.get(0);
+
+                // 중복된 기본 결제 수단이 있으면 나머지는 기본 해제 (데이터 정리)
+                if (paymentMethods.size() > 1) {
+                        for (int i = 1; i < paymentMethods.size(); i++) {
+                                PaymentMethod duplicate = paymentMethods.get(i);
+                                duplicate.updateDefaultStatus(false);
+                                paymentMethodRepository.save(duplicate);
+                        }
+                }
+
+                // 결제 수단 유효성 검증
                 if (paymentMethod.getCustomerKey() == null) {
                         throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "결제 수단 정보가 만료되었습니다. 카드를 다시 등록해주세요.");
                 }
