@@ -16,6 +16,7 @@ public class LibraryResponseDTO {
     private Long userId;
     private Long bookId;
     private String bookTitle; // 편의를 위해 책 제목 포함
+    private String coverUrl; // 책 표지 URL
     private OwnershipType ownershipType;
     private BigDecimal totalProgress;
     private ReadingStatus readingStatus;
@@ -28,6 +29,7 @@ public class LibraryResponseDTO {
                 .userId(lib.getUser().getId())
                 .bookId(lib.getBook().getBookId())
                 .bookTitle(lib.getBook().getTitle())
+                .coverUrl(lib.getBook().getCoverUrl())
                 .ownershipType(lib.getOwnershipType())
                 .totalProgress(lib.getTotalProgress())
                 .readingStatus(lib.getReadingStatus())
@@ -36,4 +38,3 @@ public class LibraryResponseDTO {
                 .build();
     }
 }
-

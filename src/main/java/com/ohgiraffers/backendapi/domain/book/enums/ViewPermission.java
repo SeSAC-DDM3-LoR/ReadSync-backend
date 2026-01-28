@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ViewPermission {
     FREE("무료 이용"),
-    PREMIUM("구독자 전용"),
+    PREMIUM("구매자 전용"),
     ADMIN("관리자 전용");
 
     private final String description;
