@@ -2,6 +2,7 @@ package com.ohgiraffers.backendapi.global.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -89,8 +90,8 @@ public class DataSourceConfig {
      */
     @Bean
     public DataSource routingDataSource(
-            DataSource masterDataSource,
-            DataSource slaveDataSource) {
+            @Qualifier("masterDataSource") DataSource masterDataSource,
+            @Qualifier("slaveDataSource") DataSource slaveDataSource) {
 
         RoutingDataSource routingDataSource = new RoutingDataSource();
 
@@ -110,7 +111,7 @@ public class DataSourceConfig {
      */
     @Primary
     @Bean
-    public DataSource dataSource(DataSource routingDataSource) {
+    public DataSource dataSource(@Qualifier("routingDataSource") DataSource routingDataSource) {
         // LazyConnectionDataSourceProxy는 실제 쿼리 실행 시점에 Connection을 가져옴
         // 이렇게 해야 @Transactional의 readOnly 속성을 제대로 인식할 수 있음
         return new LazyConnectionDataSourceProxy(routingDataSource);
