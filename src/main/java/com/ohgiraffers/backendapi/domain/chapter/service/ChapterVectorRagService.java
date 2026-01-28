@@ -233,13 +233,15 @@ public class ChapterVectorRagService {
 
         // 2. Search DB (convert List<Float> to String for native query)
         String vectorString = queryVector.toString();
-        List<RagChildVector> children = ragChildRepository.findTop5ByVectorSimilarity(chapterId, vectorString);
+        List<com.ohgiraffers.backendapi.domain.chapter.repository.RagSearchResultProjection> results = ragChildRepository
+                .findTop5ByVectorSimilarity(chapterId, vectorString);
 
-        // 3. Fetch Parents (Deduplicate) & Map to DTO
-        return children.stream()
-                .map(RagChildVector::getParent)
-                .distinct()
-                .map(com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagSearchResponseDTO::from) // Entity -> DTO 변환
+        // 3. Map to DTO (유사도 포함)
+        // Note: 이미 Repository에서 상위 5개를 가져왔으므로, 그대로 반환하거나
+        // ParentId 기준으로 중복을 제거하고 싶다면 첫 번째(가장 높은 유사도)만 남기는 로직 추가 가능.
+        // 여기서는 단순 변환만 수행 (Projection -> DTO)
+        return results.stream()
+                .map(com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagSearchResponseDTO::from)
                 .collect(Collectors.toList());
     }
 

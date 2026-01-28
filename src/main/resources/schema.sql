@@ -622,8 +622,6 @@ CREATE TABLE "chapter_vectors" (
     CONSTRAINT "PK_chapter_Vectors" PRIMARY KEY ("chapter_id")
 );
 
--- 42. Chapter Vectors RAG (260125 : 추가)
--- 42. RAG (Parent-Document Retriever)
 -- 42. RAG (Parent-Document Retriever)
 CREATE TABLE "rag_parent_documents" (
     "parent_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
