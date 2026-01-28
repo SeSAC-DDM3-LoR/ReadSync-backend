@@ -49,6 +49,7 @@ public class UserService {
                 .tag(userInfo.getTag()) // 태그 포함
                 .profileImage(userInfo.getProfileImage())
                 .role(user.getRole().getKey())
+                .status(user.getStatus().name()) // 상태 포함
                 .provider(user.getProvider().name())
                 .preferredGenre(userInfo.getPreferredGenre()) // 선호 장르 포함
                 .build();
@@ -94,9 +95,9 @@ public class UserService {
         // User 엔티티의 delete 호출 (Soft Delete 적용됨)
         user.delete();
 
-        //  UserInformation도 삭제 처리할 경우 주석 해제
+        // UserInformation도 삭제 처리할 경우 주석 해제
         // if (user.getUserInformation() != null) {
-        //     user.getUserInformation().delete();
+        // user.getUserInformation().delete();
         // }
     }
 
@@ -140,7 +141,7 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    //  [관리자 전용 기능]
+    // [관리자 전용 기능]
 
     // 6. 전체 회원 목록 조회
     @Transactional(readOnly = true)
@@ -183,7 +184,7 @@ public class UserService {
         return UserResponse.UserDetail.from(user, userInfo);
     }
 
-    //닉네임 + 태그로 특정 유저 찾기
+    // 닉네임 + 태그로 특정 유저 찾기
     @Transactional(readOnly = true)
     public UserResponse.OtherProfile findUserByTag(String nickname, String tag) {
 
@@ -205,7 +206,7 @@ public class UserService {
         String tag;
         do {
             int randomNum = new Random().nextInt(10000); // 0 ~ 9999
-            tag = String.format("%04d", randomNum);      // 4자리로 포맷팅 (예: 0012)
+            tag = String.format("%04d", randomNum); // 4자리로 포맷팅 (예: 0012)
         } while (userInformationRepository.existsByNicknameAndTag(nickname, tag));
         return tag;
     }

@@ -85,6 +85,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         if (userOptional.isPresent()) {
             user = userOptional.get();
+            // 정지/탈퇴 유저도 일단 로그인 허용 (프론트에서 체크 후 로그아웃 처리)
             // 기존 유저라면 정보 업데이트 (프로필 사진 등 변경되었을 수 있으므로)
             // 필요하다면 update 로직 추가 (현재는 생략됨)
             isNewUser = false;
