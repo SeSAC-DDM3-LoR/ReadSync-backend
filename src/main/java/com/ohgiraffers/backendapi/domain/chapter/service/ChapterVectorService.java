@@ -71,14 +71,20 @@ public class ChapterVectorService {
             // 2. 외부 AI 서버 호출 (트랜잭션 밖에서 수행)
             // S3 URL이 있다면 S3로, 없다면 GD로 시도하도록 유연하게 짰습니다.
             float[] vectorResponse;
-            if (chapter.getBookContentPath() != null && chapter.getBookContentPath().contains("s3")) {
-                vectorResponse = getVectorS3(chapter.getBookContentPath());
+
+            String path = chapter.getBookContentPath();
+
+            if (path != null && (path.contains("amazonaws.com") || path.contains(".s3."))) {
+                vectorResponse = getVectorS3(path);
+            } else if (path != null && path.contains("drive.google.com")) {
+                vectorResponse = getVectorGD(path);
             } else {
-                vectorResponse = getVectorGD(chapter.getBookContentPath());
+                // 예외 처리 혹은 기본값
+                throw new IllegalArgumentException("지원하지 않는 파일 경로 형식입니다: " + path);
             }
 
             // 3. 실제 저장은 별도 트랜잭션에서 수행 (Atomic Update)
-            saveToDatabase(chapter, vectorResponse);
+            saveOrUpdateChapterVector(chapter, vectorResponse);
 
             log.info("✅ 임베딩 완료 및 저장 성공 - Chapter ID: {}", chapterId);
         } catch (Exception e) {
@@ -89,8 +95,7 @@ public class ChapterVectorService {
     /**
      * DB 저장 로직만 트랜잭션으로 묶어 효율을 높였습니다. (Upsert)
      */
-    @Transactional
-    public void saveToDatabase(Chapter chapter, float[] vectorResponse) {
+    public void saveOrUpdateChapterVector(Chapter chapter, float[] vectorResponse) {
         ChapterVector chapterVector = chapterVectorRepository.findById(chapter.getChapterId())
                 .map(existing -> {
                     existing.updateVector(vectorResponse);

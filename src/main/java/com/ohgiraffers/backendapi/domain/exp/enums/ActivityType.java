@@ -10,5 +10,6 @@ public enum ActivityType {
     WRITE_REVIEW("리뷰 작성"),
     DAILY_ATTENDANCE("출석 체크");
 
+
     private final String description;
 }

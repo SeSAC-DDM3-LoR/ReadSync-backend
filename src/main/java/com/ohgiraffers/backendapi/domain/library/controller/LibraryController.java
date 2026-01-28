@@ -24,7 +24,7 @@ import java.util.List;
 public class LibraryController {
     private final LibraryService libraryService;
 
-    @Operation(summary = "[공통] 서재에 도서 추가", description = "특정 도서를 내 서재에 담습니다.")
+    @Operation(summary = "[공통] 내 서재에 도서 추가", description = "특정 도서를 내 서재에 담습니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping("/me")
     public ResponseEntity<Long> addToMyLibrary(@CurrentUserId Long userId, @RequestBody LibraryRequestDTO request) {
@@ -48,7 +48,7 @@ public class LibraryController {
     }
 
     @Operation(summary = "[사용자] 내 서재 조회 (페이징)", description = "현재 로그인한 사용자의 서재 목록을 조회합니다.")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/me")
     public ResponseEntity<Page<LibraryResponseDTO>> getMyBookLog(
             @CurrentUserId Long userId,
@@ -77,9 +77,9 @@ public class LibraryController {
         return ResponseEntity.ok(libraryService.getLibraryByUserIdAndCategoryId(userId, categoryId, pageable));
     }
 
-    @Operation(summary = "[공통] 서재에서 도서 삭제", description = "내 서재에서 도서를 제거(Soft Delete)합니다.")
+    @Operation(summary = "[공통] 서재에서 도서 삭제", description = "서재에서 도서를 제거(Soft Delete)합니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @DeleteMapping("/{libraryId}")
+    @DeleteMapping("/delete/{libraryId}")
     public ResponseEntity<Void> delete(@PathVariable Long libraryId) {
         libraryService.deleteFromLibrary(libraryId);
         return ResponseEntity.noContent().build();
