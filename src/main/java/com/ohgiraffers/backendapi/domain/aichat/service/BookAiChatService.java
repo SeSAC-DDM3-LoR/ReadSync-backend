@@ -148,6 +148,7 @@ public class BookAiChatService {
      * Python AI 서버에 요청을 보내고 응답을 받아 DB에 저장합니다.
      */
     @Transactional
+    @SuppressWarnings("unchecked")
     public BookAiChatResponseDTO sendMessage(Long userId, Long roomId, BookAiChatRequestDTO request) {
         BookAiChatRoom room = findChatRoomById(roomId);
         validateRoomOwner(room, userId);
@@ -156,30 +157,72 @@ public class BookAiChatService {
         long startTime = System.currentTimeMillis();
 
         try {
-            // Python AI 서버 호출
+            // Python AI 서버 호출 (/api/v1/generate-answer)
+            // chatType은 AI가 자동 분류
             Map<String, Object> aiResponse = callAiServer(
                     room.getChapter().getChapterId(),
                     request.getUserMessage(),
-                    request.getChatType());
+                    request.getCurrentParagraphId());
 
             long responseTimeMs = System.currentTimeMillis() - startTime;
 
             // AI 응답에서 데이터 추출
             String aiMessage = (String) aiResponse.getOrDefault("answer", "죄송합니다. 응답을 생성할 수 없습니다.");
-            Integer tokenCount = (Integer) aiResponse.get("token_count");
+            Integer tokenCount = aiResponse.get("token_count") != null
+                    ? ((Number) aiResponse.get("token_count")).intValue()
+                    : null;
+
+            // 응답에서 chat_type 추출 (AI가 자동 분류)
+            ChatType determinedChatType = ChatType.CONTENT_QA;
+            if (aiResponse.get("chat_type") != null) {
+                try {
+                    determinedChatType = ChatType.valueOf((String) aiResponse.get("chat_type"));
+                } catch (IllegalArgumentException e) {
+                    determinedChatType = ChatType.CONTENT_QA;
+                }
+            }
+
+            // 출처 정보 추출 (RAG 사용 시)
+            List<SourceReferenceDTO> sources = null;
+            if (aiResponse.get("sources") != null) {
+                List<Map<String, Object>> rawSources = (List<Map<String, Object>>) aiResponse.get("sources");
+                sources = rawSources.stream()
+                        .map(src -> SourceReferenceDTO.builder()
+                                .paragraphIds((List<String>) src.get("paragraph_ids"))
+                                .contentPreview((String) src.get("content_preview"))
+                                .similarity(src.get("similarity") != null
+                                        ? ((Number) src.get("similarity")).doubleValue()
+                                        : 0.0)
+                                .build())
+                        .collect(Collectors.toList());
+            }
 
             // DB에 저장
             BookAiChat chat = BookAiChat.builder()
                     .chatRoom(room)
                     .user(user)
-                    .chatType(request.getChatType() != null ? request.getChatType() : ChatType.CONTENT_QA)
+                    .chatType(determinedChatType != null ? determinedChatType : ChatType.CONTENT_QA)
                     .userMessage(request.getUserMessage())
                     .aiMessage(aiMessage)
                     .tokenCount(tokenCount)
                     .responseTimeMs((int) responseTimeMs)
                     .build();
 
-            return BookAiChatResponseDTO.from(chatRepository.save(chat));
+            BookAiChat savedChat = chatRepository.save(chat);
+
+            // 응답 DTO 생성 (출처 정보 포함)
+            return BookAiChatResponseDTO.builder()
+                    .chatId(savedChat.getChatId())
+                    .aiRoomId(savedChat.getChatRoom().getAiRoomId())
+                    .userMessage(savedChat.getUserMessage())
+                    .aiMessage(savedChat.getAiMessage())
+                    .chatType(savedChat.getChatType())
+                    .rating(savedChat.getRating())
+                    .tokenCount(savedChat.getTokenCount())
+                    .responseTimeMs(savedChat.getResponseTimeMs())
+                    .createdAt(savedChat.getCreatedAt())
+                    .sources(sources)
+                    .build();
 
         } catch (WebClientResponseException e) {
             log.error("AI 서버 호출 실패: {}", e.getMessage());
@@ -191,6 +234,7 @@ public class BookAiChatService {
      * [9] 메시지 전송 (SSE 스트리밍)
      * Python AI 서버에서 스트리밍 응답을 받아 클라이언트에 전달합니다.
      * 스트리밍 완료 후 DB에 저장합니다.
+     * chatType은 AI가 자동으로 분류합니다.
      */
     @Transactional
     public Flux<String> sendMessageStream(Long userId, Long roomId, BookAiChatRequestDTO request) {
@@ -204,16 +248,17 @@ public class BookAiChatService {
         return callAiServerStream(
                 room.getChapter().getChapterId(),
                 request.getUserMessage(),
-                request.getChatType())
+                request.getCurrentParagraphId())
                 .doOnNext(chunk -> fullResponse.append(chunk))
                 .doOnComplete(() -> {
                     long responseTimeMs = System.currentTimeMillis() - startTime;
 
                     // 스트리밍 완료 후 DB에 저장
+                    // 스트리밍에서는 chatType을 기본값으로 저장 (분류 결과가 스트림에 포함되지 않음)
                     BookAiChat chat = BookAiChat.builder()
                             .chatRoom(room)
                             .user(user)
-                            .chatType(request.getChatType() != null ? request.getChatType() : ChatType.CONTENT_QA)
+                            .chatType(ChatType.CONTENT_QA) // 기본값 사용
                             .userMessage(request.getUserMessage())
                             .aiMessage(fullResponse.toString())
                             .responseTimeMs((int) responseTimeMs)
@@ -252,15 +297,24 @@ public class BookAiChatService {
 
     /**
      * Python AI 서버 호출 (일반 HTTP)
+     * /api/v1/generate-answer 엔드포인트를 호출합니다.
+     * chatType은 AI가 자동으로 분류합니다.
      */
-    private Map<String, Object> callAiServer(Long chapterId, String userMessage, ChatType chatType) {
+    private Map<String, Object> callAiServer(Long chapterId, String userMessage, String currentParagraphId) {
+        // 요청 본문 구성
+        java.util.HashMap<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("chapter_id", chapterId);
+        requestBody.put("user_message", userMessage);
+        // chatType은 전달하지 않음 - AI 서버에서 자동 분류
+
+        if (currentParagraphId != null && !currentParagraphId.isEmpty()) {
+            requestBody.put("current_paragraph_id", currentParagraphId);
+        }
+
         return aiWebClient.post()
-                .uri("/generate-answer")
+                .uri("/api/v1/generate-answer")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of(
-                        "chapter_id", chapterId,
-                        "user_message", userMessage,
-                        "chat_type", chatType != null ? chatType.name() : ChatType.CONTENT_QA.name()))
+                .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(Map.class)
                 .timeout(Duration.ofSeconds(aiServerTimeout))
@@ -269,15 +323,22 @@ public class BookAiChatService {
 
     /**
      * Python AI 서버 호출 (SSE 스트리밍)
+     * /api/v1/generate-answer-stream 엔드포인트를 호출합니다.
+     * chatType은 AI가 자동으로 분류합니다.
      */
-    private Flux<String> callAiServerStream(Long chapterId, String userMessage, ChatType chatType) {
+    private Flux<String> callAiServerStream(Long chapterId, String userMessage, String currentParagraphId) {
+        java.util.HashMap<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("chapter_id", chapterId);
+        requestBody.put("user_message", userMessage);
+
+        if (currentParagraphId != null && !currentParagraphId.isEmpty()) {
+            requestBody.put("current_paragraph_id", currentParagraphId);
+        }
+
         return aiWebClient.post()
-                .uri("/generate-answer/stream")
+                .uri("/api/v1/generate-answer-stream")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of(
-                        "chapter_id", chapterId,
-                        "user_message", userMessage,
-                        "chat_type", chatType != null ? chatType.name() : ChatType.CONTENT_QA.name()))
+                .bodyValue(requestBody)
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .retrieve()
                 .bodyToFlux(String.class)

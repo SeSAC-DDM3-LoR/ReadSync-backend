@@ -27,8 +27,8 @@ public class ChapterVectorRagController {
         return ResponseEntity.ok("RAG 임베딩 작업이 백그라운드에서 시작되었습니다.");
     }
 
-    @PreAuthorize("hasRole('ADMIN')") // AI 연산은 관리자만 호출 가능하도록 제한
-    @Operation(summary = "[관리자] RAG 검색", description = "주어진 쿼리와 유사한 챕터 내용을 검색하여 문맥(Parent)을 반환합니다.")
+    // AI 서버 내부 호출용 - 인증 불필요
+    @Operation(summary = "[내부] RAG 검색", description = "AI 서버에서 호출하는 내부 API. 주어진 쿼리와 유사한 챕터 내용을 검색하여 문맥(Parent)을 반환합니다.")
     @org.springframework.web.bind.annotation.GetMapping("/{chapterId}/rag-search")
     public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagSearchResponseDTO>> searchRagChapter(
             @PathVariable Long chapterId,

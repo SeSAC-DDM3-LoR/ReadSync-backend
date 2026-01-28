@@ -26,6 +26,9 @@ public class BookAiChatResponseDTO {
     private Integer responseTimeMs;
     private LocalDateTime createdAt;
 
+    // RAG 출처 정보 (RAG로 찾아온 경우에만 값이 있음)
+    private java.util.List<SourceReferenceDTO> sources;
+
     /**
      * Entity -> DTO 변환
      */
