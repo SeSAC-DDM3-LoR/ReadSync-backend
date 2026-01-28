@@ -22,5 +22,9 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     /**
      * 특정 유저의 기본 결제 수단을 조회합니다.
      */
+    // 기본 결제 수단 조회 (중복 방지를 위해 List 반환 후 처리)
+    List<PaymentMethod> findByUserAndIsDefaultTrueAndDeletedAtIsNullOrderByCreatedAtDesc(User user);
+
+    // 기존 메서드 유지 (deprecated)
     Optional<PaymentMethod> findByUserAndIsDefaultTrueAndDeletedAtIsNull(User user);
 }

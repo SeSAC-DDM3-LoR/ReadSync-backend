@@ -14,9 +14,16 @@ TRUNCATE TABLE
 
 -- [1] Levels (기초 레벨 정보)
 INSERT INTO "levels" ("required_exp", "max_comment_limit", "can_upload_image") VALUES
-                                                                                   (0, 30, FALSE),
-                                                                                   (1000, 50, FALSE),
-                                                                                   (5000, 100, TRUE);
+                                                                                   (0, 30, FALSE),       -- Level 1 (시작)
+                                                                                   (100, 40, FALSE),     -- Level 2
+                                                                                   (200, 50, FALSE),     -- Level 3
+                                                                                   (400, 60, FALSE),     -- Level 4
+                                                                                   (800, 70, FALSE),     -- Level 5
+                                                                                   (1600, 80, TRUE),     -- Level 6
+                                                                                   (3200, 100, TRUE),    -- Level 7
+                                                                                   (6400, 150, TRUE),    -- Level 8
+                                                                                   (12800, 200, TRUE),   -- Level 9
+                                                                                   (25600, 300, TRUE);   -- Level 10                                                                         (5000, 100, TRUE);
 
 -- [2] Categories (도서/활동 카테고리)
 INSERT INTO "categories" ("category_name") VALUES
@@ -96,7 +103,11 @@ INSERT INTO "chapters" ("book_id", "chapter_name", "sequence", "book_content_pat
                                                                                                     (2, '2장: 객체지향', 2, '/path/java_ch2', -1),
                                                                                                     (3, '1장: AI의 역사', 1, '/path/ai_ch1', -1),
                                                                                                     (3, '2장: AI의 역사', 1, '/path/ai_ch2', -1),
-                                                                                                    (3, '3장: AI의 역사', 1, '/path/ai_ch3', -1);
+                                                                                                    (3, '3장: AI의 역사', 1, '/path/ai_ch3', -1),
+                                                                                                    (4, '1장', 1, 'https://drive.google.com/file/d/1GKS0nTkwUaH07YRAY0U0Tt0S6p-j_rD7/view?usp=sharing', 209),
+                                                                                                    (4, '2장', 2, 'https://drive.google.com/file/d/1EV21SYFQ4JAMfoWmiemz9Nc7a38us982/view?usp=sharing', 163),
+                                                                                                    (4, '3장', 3, 'https://drive.google.com/file/d/19ys8OlK3U9J3OiMO4m55CIQ4Fi8nhAU9/view?usp=sharing', 139),
+                                                                                                    (4, '4장', 4, 'https://drive.google.com/file/d/1L7Hbd27mVLx2UEErAj_T_qeaR3dLae4m/view?usp=sharing', 45);
 
 -- [12] Chapter Vectors (챕터 벡터 - Chapter 참조)
 INSERT INTO "chapter_vectors" ("chapter_id", "vector", "created_at") VALUES

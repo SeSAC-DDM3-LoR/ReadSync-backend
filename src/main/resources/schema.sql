@@ -224,7 +224,7 @@ CREATE TABLE "reports" (
     CONSTRAINT "PK_REPORTS" PRIMARY KEY ("report_id")
 );
 
--- 13. Levels
+-- 13. s
 CREATE TABLE "levels" (
     "level_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "required_exp" INT NOT NULL,
