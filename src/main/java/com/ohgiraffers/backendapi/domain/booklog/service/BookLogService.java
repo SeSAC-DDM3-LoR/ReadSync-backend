@@ -76,6 +76,6 @@ public class BookLogService {
     public void deleteLog(Long bookLogId) {
         BookLog bookLog = bookLogRepository.findById(bookLogId)
                 .orElseThrow(() -> new IllegalArgumentException("이미 존재하지 않는 도서 로그입니다."));
-        bookLog.delete();
+        bookLogRepository.delete(bookLog);
     }
 }

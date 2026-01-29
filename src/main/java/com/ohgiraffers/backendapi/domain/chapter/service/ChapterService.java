@@ -154,6 +154,12 @@ public class ChapterService {
                 : "Untitled Chapter";
         Integer finalParagraphs = requestDTO.getParagraphs() != null ? requestDTO.getParagraphs() : -1;
 
+        // 토탈 문단수를 위해 추가 -김정우-
+        if (finalParagraphs > 0) {
+            book.adjustTotalParagraphs(finalParagraphs);
+        }
+
+
         // 4. 엔티티 생성 및 저장
         Chapter chapter = Chapter.builder()
                 .book(book)

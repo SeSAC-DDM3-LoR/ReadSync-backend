@@ -13,6 +13,9 @@ import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVector;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterVectorRepository;
 import com.ohgiraffers.backendapi.domain.chapter.service.ChapterVectorService;
+import com.ohgiraffers.backendapi.domain.user.entity.UserPreference;
+import com.ohgiraffers.backendapi.domain.user.repository.UserPreferenceRepository;
+import com.ohgiraffers.backendapi.domain.user.service.UserPreferenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +41,7 @@ public class BookVectorService {
     private final ChapterVectorRepository chapterVectorRepository;
     private final WebClient embeddingServerWebClient;
     private final ChapterVectorService chapterVectorService;
+    private final UserPreferenceRepository userPreferenceRepository;
 
     /**
      * 특정 도서 ID를 기준으로 유사한 도서를 추천합니다.
@@ -54,12 +58,14 @@ public class BookVectorService {
     }
 
     /**
-     * [공통] 사용자 취향 벡터 기반 도서 추천
+     * [공통] 사용자 장기 취향 벡터 기반 도서 추천
      */
     @Transactional(readOnly = true)
-    public Page<BookRecommendationDTO> getRecommendationsByVector(String vector, Pageable pageable) {
+    public Page<BookRecommendationDTO> getRecommendationsByVector(Long userId, Pageable pageable) {
+        UserPreference userPreference = userPreferenceRepository.findById(userId).orElseThrow();
+        String vectorString = Arrays.toString(userPreference.getVector());
         // 취향 기반 검색이므로 제외할 ID 없음 (null)
-        return getRecommendations(vector, null, pageable);
+        return getRecommendations(vectorString, null, pageable);
     }
 
     /**

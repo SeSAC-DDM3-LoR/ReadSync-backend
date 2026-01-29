@@ -3,6 +3,7 @@ package com.ohgiraffers.backendapi.domain.book.controller;
 import com.ohgiraffers.backendapi.domain.book.dto.BookRecommendationDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookVectorDTO;
 import com.ohgiraffers.backendapi.domain.book.service.BookVectorService;
+import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,10 +47,10 @@ public class BookVectorController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/search")
     public ResponseEntity<Page<BookRecommendationDTO>> searchByVector(
-            @Parameter(description = "[0.1, 0.2, ...] 형태의 벡터 문자열") @RequestParam String vector,
+            @CurrentUserId Long userId,
             @Parameter(hidden = true) @PageableDefault(size = 5) Pageable pageable) {
 
-        Page<BookRecommendationDTO> results = bookVectorService.getRecommendationsByVector(vector, pageable);
+        Page<BookRecommendationDTO> results = bookVectorService.getRecommendationsByVector(userId, pageable);
         return ResponseEntity.ok(results);
     }
 

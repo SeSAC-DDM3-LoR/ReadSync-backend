@@ -55,6 +55,10 @@ public class UserPreferenceService {
     }
 
     private float[] applyEma(float[] oldVec, float[] chapterVec, float weight) {
+        if (oldVec == null) {
+            oldVec = new float[1024];
+        }
+
         float[] newVec = new float[1024];
         float sumSq = 0;
 

@@ -47,7 +47,7 @@ public class LibraryController {
         return ResponseEntity.ok(libraryService.getUserLibrary(userId, pageable));
     }
 
-    @Operation(summary = "[사용자] 내 서재 조회 (페이징)", description = "현재 로그인한 사용자의 서재 목록을 조회합니다.")
+    @Operation(summary = "[공통] 내 서재 조회 (페이징)", description = "현재 로그인한 사용자의 서재 목록을 조회합니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/me")
     public ResponseEntity<Page<LibraryResponseDTO>> getMyBookLog(
