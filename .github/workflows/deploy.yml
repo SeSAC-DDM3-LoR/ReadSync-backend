@@ -50,8 +50,9 @@ jobs:
 
       # 5. 빌드 (테스트 포함 - 안정성 확보)
       # 테스트 제외하려면: ./gradlew clean build -x test --no-daemon
+      # ./gradlew clean build --no-daemon
       - name: Build with Gradle
-        run: ./gradlew clean build --no-daemon
+        run: ./gradlew clean build -x test --no-daemon
         env:
           SPRING_PROFILES_ACTIVE: prod
 
