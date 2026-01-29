@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class BookAiChatRoomResponseDTO {
 
-    private Long aiRoomId;
+    private Long roomId;
     private Long chapterId;
     private String chapterName;
     private String bookTitle;
@@ -29,7 +29,7 @@ public class BookAiChatRoomResponseDTO {
      */
     public static BookAiChatRoomResponseDTO from(BookAiChatRoom room) {
         return BookAiChatRoomResponseDTO.builder()
-                .aiRoomId(room.getAiRoomId())
+                .roomId(room.getAiRoomId())
                 .chapterId(room.getChapter().getChapterId())
                 .chapterName(room.getChapter().getChapterName())
                 .bookTitle(room.getChapter().getBook().getTitle())
@@ -44,7 +44,7 @@ public class BookAiChatRoomResponseDTO {
      */
     public static BookAiChatRoomResponseDTO from(BookAiChatRoom room, Long messageCount) {
         return BookAiChatRoomResponseDTO.builder()
-                .aiRoomId(room.getAiRoomId())
+                .roomId(room.getAiRoomId())
                 .chapterId(room.getChapter().getChapterId())
                 .chapterName(room.getChapter().getChapterName())
                 .bookTitle(room.getChapter().getBook().getTitle())

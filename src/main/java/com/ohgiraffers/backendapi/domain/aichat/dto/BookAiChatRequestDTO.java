@@ -13,4 +13,5 @@ public class BookAiChatRequestDTO {
 
     private String userMessage; // 필수: 사용자 질문
     private ChatType chatType; // 선택: 채팅 유형 (기본값: CONTENT_QA)
+    private String currentParagraphId; // 선택: 문맥 파악용 문단 ID
 }

@@ -12,12 +12,12 @@ import java.time.LocalDateTime;
  * AI 채팅 메시지 응답 DTO
  */
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 public class BookAiChatResponseDTO {
 
     private Long chatId;
-    private Long aiRoomId;
+    private Long roomId;
     private String userMessage;
     private String aiMessage;
     private ChatType chatType;
@@ -25,6 +25,7 @@ public class BookAiChatResponseDTO {
     private Integer tokenCount;
     private Integer responseTimeMs;
     private LocalDateTime createdAt;
+    private String relatedParagraphId; // 선택: RAG 출처 문단 ID
 
     /**
      * Entity -> DTO 변환
@@ -32,7 +33,7 @@ public class BookAiChatResponseDTO {
     public static BookAiChatResponseDTO from(BookAiChat chat) {
         return BookAiChatResponseDTO.builder()
                 .chatId(chat.getChatId())
-                .aiRoomId(chat.getChatRoom().getAiRoomId())
+                .roomId(chat.getChatRoom().getAiRoomId())
                 .userMessage(chat.getUserMessage())
                 .aiMessage(chat.getAiMessage())
                 .chatType(chat.getChatType())

@@ -136,7 +136,7 @@ class BookAiChatServiceTest {
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getAiRoomId()).isEqualTo(1L);
+            assertThat(result.getRoomId()).isEqualTo(1L);
             verify(chatRoomRepository, times(1)).save(any(BookAiChatRoom.class));
         }
 
@@ -156,7 +156,7 @@ class BookAiChatServiceTest {
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getAiRoomId()).isEqualTo(1L);
+            assertThat(result.getRoomId()).isEqualTo(1L);
             verify(chatRoomRepository, never()).save(any(BookAiChatRoom.class));
         }
 
@@ -208,7 +208,7 @@ class BookAiChatServiceTest {
 
             // then
             assertThat(result).isNotNull();
-            assertThat(result.getAiRoomId()).isEqualTo(1L);
+            assertThat(result.getRoomId()).isEqualTo(1L);
             assertThat(result.getMessageCount()).isEqualTo(5L);
         }
 
@@ -256,7 +256,7 @@ class BookAiChatServiceTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().get(0).getAiRoomId()).isEqualTo(1L);
+            assertThat(result.getContent().get(0).getRoomId()).isEqualTo(1L);
         }
     }
 
