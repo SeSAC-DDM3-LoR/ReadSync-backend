@@ -6,7 +6,9 @@ import com.ohgiraffers.backendapi.domain.friendship.enums.FriendshipStatus;
 import com.ohgiraffers.backendapi.domain.friendship.repository.FriendshipRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.entity.UserInformation;
+import com.ohgiraffers.backendapi.domain.user.enums.UserActivityStatus;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
+import com.ohgiraffers.backendapi.domain.user.service.UserStatusService;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +41,9 @@ class FriendshipServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserStatusService userStatusService;
 
     private User requester;
     private User addressee;
@@ -85,7 +90,7 @@ class FriendshipServiceTest {
             // given
             given(userRepository.findById(1L)).willReturn(Optional.of(requester));
             given(userRepository.findById(2L)).willReturn(Optional.of(addressee));
-            given(friendshipRepository.existsByUsers(requester, addressee)).willReturn(false);
+            given(friendshipRepository.findByUsers(requester, addressee)).willReturn(Optional.empty());
 
             // when
             friendshipService.sendFriendRequest(1L, 2L);
@@ -107,9 +112,15 @@ class FriendshipServiceTest {
         @DisplayName("실패: 이미 친구 관계가 존재하면 요청할 수 없다.")
         void fail_already_exists() {
             // given
+            Friendship acceptedFriendship = Friendship.builder()
+                    .requester(requester)
+                    .addressee(addressee)
+                    .status(FriendshipStatus.ACCEPTED)
+                    .build();
+
             given(userRepository.findById(1L)).willReturn(Optional.of(requester));
             given(userRepository.findById(2L)).willReturn(Optional.of(addressee));
-            given(friendshipRepository.existsByUsers(requester, addressee)).willReturn(true);
+            given(friendshipRepository.findByUsers(requester, addressee)).willReturn(Optional.of(acceptedFriendship));
 
             // when & then
             CustomException exception = assertThrows(CustomException.class,
@@ -131,6 +142,7 @@ class FriendshipServiceTest {
 
             given(friendshipRepository.findMyFriendships(1L, FriendshipStatus.ACCEPTED))
                     .willReturn(List.of(friendship));
+            given(userStatusService.getUserStatus(2L)).willReturn(UserActivityStatus.ONLINE);
 
             // when
             List<FriendListResponseDTO> result = friendshipService.getMyFriends(1L);

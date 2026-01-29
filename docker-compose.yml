@@ -14,3 +14,5 @@ services:
       # (참고) 만약 Redis를 ElastiCache 안 쓰고 그냥 서버 안에 띄우고 싶으면
       # 여기에 Redis 접속 정보를 localhost로 잡아야 하는데, 
       # 일단은 정석대로 '앱'만 깔끔하게 띄우는 걸 추천합니다.
+    volumes:
+      - ./my-data:/app/data
