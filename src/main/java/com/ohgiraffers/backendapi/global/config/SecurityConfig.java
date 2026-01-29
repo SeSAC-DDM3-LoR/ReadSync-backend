@@ -76,8 +76,7 @@ public class SecurityConfig {
         @Bean
         public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
                 org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-                configuration.setAllowedOrigins(
-                                java.util.Arrays.asList("http://localhost:5173", "http://localhost:3000")); // 프론트엔드 URL
+                configuration.setAllowedOriginPatterns(java.util.Arrays.asList("*")); // 모든 출처 허용
                 configuration.setAllowedMethods(
                                 java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(java.util.Arrays.asList("*"));

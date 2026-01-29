@@ -139,5 +139,4 @@ Temporary Items
 *_REMOTE_*.txt
 
 ### API Test Files ###
-api-test.html
-websocket-test.html
+websocket_test_client.html
