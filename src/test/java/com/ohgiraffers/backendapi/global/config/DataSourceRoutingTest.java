@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Master DB (5432), Slave DB (5433) 모두 실행 중이어야 함
  */
 @SpringBootTest
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 class DataSourceRoutingTest {
 
     @Autowired

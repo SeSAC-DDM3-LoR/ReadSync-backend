@@ -22,7 +22,7 @@ import java.util.Map;
  * - Slave: 읽기 작업 (SELECT)
  */
 @Configuration
-@Profile("dev") // 개발 환경에서만 활성화
+@Profile({ "dev", "test" }) // 개발 환경 및 테스트 환경에서 활성화
 public class DataSourceConfig {
 
     @Value("${spring.datasource.driver-class-name}")

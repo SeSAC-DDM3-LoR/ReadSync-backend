@@ -79,14 +79,15 @@ class CommentServiceTest {
     @DisplayName("댓글 작성 성공")
     void createComment_Success() {
         // given
-        CommentRequestDTO requestDTO = new CommentRequestDTO();
-        ReflectionTestUtils.setField(requestDTO, "content", "새로운 댓글");
-        ReflectionTestUtils.setField(requestDTO, "isSpoiler", false);
-        ReflectionTestUtils.setField(requestDTO, "parentCommentId", null);
+        CommentRequestDTO requestDTO = createCommentRequest("새로운 댓글", false, null);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(chapterRepository.findById(100L)).willReturn(Optional.of(chapter));
-        given(commentRepository.save(any(Comment.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(commentRepository.save(any(Comment.class))).willAnswer(invocation -> {
+            Comment savedComment = invocation.getArgument(0);
+            ReflectionTestUtils.setField(savedComment, "commentId", 20L);
+            return savedComment;
+        });
 
         // when
         CommentResponseDTO result = commentService.createComment(1L, 100L, requestDTO);
@@ -104,19 +105,31 @@ class CommentServiceTest {
         Comment parentComment = Comment.builder().user(user).chapter(chapter).content("부모").isSpoiler(false).build();
         ReflectionTestUtils.setField(parentComment, "commentId", 50L);
 
-        CommentRequestDTO requestDTO = new CommentRequestDTO();
-        ReflectionTestUtils.setField(requestDTO, "content", "대댓글 내용");
-        ReflectionTestUtils.setField(requestDTO, "parentCommentId", 50L);
+        CommentRequestDTO requestDTO = createCommentRequest("대댓글 내용", false, 50L);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(chapterRepository.findById(100L)).willReturn(Optional.of(chapter));
         given(commentRepository.findById(50L)).willReturn(Optional.of(parentComment));
+        given(commentRepository.save(any(Comment.class))).willAnswer(invocation -> {
+            Comment savedComment = invocation.getArgument(0);
+            ReflectionTestUtils.setField(savedComment, "commentId", 21L);
+            return savedComment;
+        });
 
         // when
         CommentResponseDTO result = commentService.createComment(1L, 100L, requestDTO);
 
         // then
         assertThat(result.getParentCommentId()).isEqualTo(50L); // 부모 ID가 잘 들어갔는지
+    }
+
+    // Helper method to create CommentRequestDTO
+    private CommentRequestDTO createCommentRequest(String content, boolean isSpoiler, Long parentCommentId) {
+        CommentRequestDTO dto = new CommentRequestDTO();
+        ReflectionTestUtils.setField(dto, "content", content);
+        ReflectionTestUtils.setField(dto, "spoiler", isSpoiler);
+        ReflectionTestUtils.setField(dto, "parentCommentId", parentCommentId);
+        return dto;
     }
 
     @Test
