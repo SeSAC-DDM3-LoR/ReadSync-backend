@@ -16,7 +16,8 @@ public class UserResponse {
         private String refreshToken;
         private UserDetail detail;
 
-        public static UserLoginResponse of(String accessToken, String refreshToken, User user, UserInformation userInfo) {
+        public static UserLoginResponse of(String accessToken, String refreshToken, User user,
+                UserInformation userInfo) {
             return UserLoginResponse.builder()
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
@@ -61,6 +62,8 @@ public class UserResponse {
         private String nickname;
         private String tag;
         private String profileImage;
+        private String role;
+        private String status;
         private int experience;
         private String preferredGenre;
         private String providerId;
@@ -73,6 +76,8 @@ public class UserResponse {
                     .nickname(user.getUserInformation().getNickname())
                     .tag(user.getUserInformation().getTag())
                     .profileImage(user.getUserInformation().getProfileImage())
+                    .role(user.getRole().getKey())
+                    .status(user.getStatus().name())
                     .experience(user.getUserInformation().getExperience())
                     .preferredGenre(user.getUserInformation().getPreferredGenre())
                     .build();
@@ -89,7 +94,8 @@ public class UserResponse {
         private String nickname;
         private String tag;
         private String profileImage;
-        private String role;     // USER, ADMIN
+        private String role; // USER, ADMIN
+        private String status; // ACTIVE, BANNED, WITHDRAWN
         private String provider; // kakao, google, naver
         private String preferredGenre;
     }
@@ -123,8 +129,8 @@ public class UserResponse {
         private String nickname;
         private String tag;
         private String role;
-        private String status;     // ACTIVE, BANNED, WITHDRAWN
+        private String status; // ACTIVE, BANNED, WITHDRAWN
         private String provider;
-        private String createdAt;  // 가입일
+        private String createdAt; // 가입일
     }
 }

@@ -7,9 +7,8 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-
 @Entity
-@Table(name = "user_informations", uniqueConstraints = { @UniqueConstraint(columnNames = {"user_name", "tag"}) })
+@Table(name = "user_informations", uniqueConstraints = { @UniqueConstraint(columnNames = { "user_name", "tag" }) })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -48,22 +47,35 @@ public class UserInformation extends BaseTimeEntity {
     @Column(nullable = false, length = 4)
     private String tag;
 
-
     public void addExperience(int exp) {
         this.experience += exp;
+    }
+
+    public void setExperience(int exp) {
+        this.experience = exp;
     }
 
     public void levelUp(Long nextLevelId) {
         this.levelId = nextLevelId;
     }
 
-    public void update(String nickname, String profileImage, String preferredGenre) {
-        if (nickname != null) this.nickname = nickname;
-        if (profileImage != null) this.profileImage = profileImage;
-        if (preferredGenre != null) this.preferredGenre = preferredGenre;
+    public void levelUpWithExpReset(Long nextLevelId, int remainingExp) {
+        this.levelId = nextLevelId;
+        this.experience = remainingExp;
     }
 
-    public void updatePreferredGenre(String preferredGenre){this.preferredGenre = preferredGenre;}
+    public void update(String nickname, String profileImage, String preferredGenre) {
+        if (nickname != null)
+            this.nickname = nickname;
+        if (profileImage != null)
+            this.profileImage = profileImage;
+        if (preferredGenre != null)
+            this.preferredGenre = preferredGenre;
+    }
+
+    public void updatePreferredGenre(String preferredGenre) {
+        this.preferredGenre = preferredGenre;
+    }
 
     public void updateProfileImage(String profileImage) {
         this.profileImage = profileImage;

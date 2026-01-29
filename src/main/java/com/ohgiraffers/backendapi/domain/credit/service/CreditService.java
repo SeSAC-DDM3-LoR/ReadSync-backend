@@ -71,14 +71,14 @@ public class CreditService {
 
         // 2) 사용 가능한 크레딧을 만료일 급한 순서대로 가져옴
         List<Credit> activeCredits = creditRepository.findAllByUserIdAndStatusOrderByExpiredAtAsc(
-                userId, CreditStatus.ACTIVE
-        );
+                userId, CreditStatus.ACTIVE);
 
         // 3) 순회하며 차감
         int remainingAmount = amountToUse;
 
         for (Credit credit : activeCredits) {
-            if (remainingAmount <= 0) break;
+            if (remainingAmount <= 0)
+                break;
 
             int available = credit.getAmount();
 
@@ -100,7 +100,8 @@ public class CreditService {
 
     // 4. [어드민] 전체 크레딧 로그 조회 (날짜 필터링 옵션)
     @Transactional(readOnly = true)
-    public Page<CreditResponse.AdminCreditLog> getAdminAllCredits(LocalDate startDate, LocalDate endDate, Pageable pageable) {
+    public Page<CreditResponse.AdminCreditLog> getAdminAllCredits(LocalDate startDate, LocalDate endDate,
+            Pageable pageable) {
         // 날짜 조건이 없으면 전체 조회
         if (startDate == null || endDate == null) {
             return creditRepository.findAllCredits(pageable)
@@ -111,20 +112,21 @@ public class CreditService {
         return creditRepository.findAllByDate(
                 startDate.atStartOfDay(),
                 endDate.atTime(23, 59, 59),
-                pageable
-        ).map(CreditResponse.AdminCreditLog::from);
+                pageable).map(CreditResponse.AdminCreditLog::from);
     }
 
     // 5. [어드민] 특정 유저 크레딧 상세 조회
     @Transactional(readOnly = true)
-    public Page<CreditResponse.AdminCreditLog> getAdminUserCredits(Long targetUserId, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+    public Page<CreditResponse.AdminCreditLog> getAdminUserCredits(Long targetUserId, LocalDate startDate,
+            LocalDate endDate, Pageable pageable) {
         // 유저 존재 확인
         if (!userRepository.existsById(targetUserId)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
         // 날짜가 없으면 기본적으로 전체 기간 (2000년 ~ 현재)
-        LocalDateTime startDateTime = (startDate != null) ? startDate.atStartOfDay() : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime startDateTime = (startDate != null) ? startDate.atStartOfDay()
+                : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime endDateTime = (endDate != null) ? endDate.atTime(23, 59, 59) : LocalDateTime.now();
 
         return creditRepository.findHistoryByUserIdAndDate(targetUserId, startDateTime, endDateTime, pageable)

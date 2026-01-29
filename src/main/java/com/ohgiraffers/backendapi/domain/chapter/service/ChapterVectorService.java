@@ -36,13 +36,8 @@ public class ChapterVectorService {
                 .retrieve()
                 .bodyToMono(ChapterVectorResponseDTO.class)
                 .map(ChapterVectorResponseDTO::getEmbedding)
-                // 1. 개별 시도는 1분씩 (부팅 중엔 응답이 없을 수 있으니까요)
-                .timeout(Duration.ofSeconds(60))
-                // 2. 서버가 일어날 때까지 30초 간격으로 최대 5번만 다시 물어보기
-                .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(30))
-                        .doBeforeRetry(retrySignal -> log.warn("💤 서버 깨우는 중... (시도: {})", retrySignal.totalRetries() + 1)))
-                // 3. 전체적으로 최대 5분까지는 기다려주기
-                .block(Duration.ofMinutes(5));
+                .timeout(Duration.ofMinutes(4)) // 1. 여기서 넉넉히 기다려주고
+                .block(); // 2. 여기서는 시간 제한 없이(혹은 5분 정도) 결과가 올 때까지 대기
     }
 
     /**
@@ -55,12 +50,8 @@ public class ChapterVectorService {
                 .retrieve()
                 .bodyToMono(ChapterVectorResponseDTO.class)
                 .map(ChapterVectorResponseDTO::getEmbedding)
-                .timeout(Duration.ofSeconds(60))
-                // 2. 서버가 일어날 때까지 30초 간격으로 최대 5번만 다시 물어보기
-                .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(30))
-                        .doBeforeRetry(retrySignal -> log.warn("💤 서버 깨우는 중... (시도: {})", retrySignal.totalRetries() + 1)))
-                // 3. 전체적으로 최대 5분까지는 기다려주기
-                .block(Duration.ofMinutes(5));
+                .timeout(Duration.ofMinutes(4)) // 1. 여기서 넉넉히 기다려주고
+                .block(); // 2. 여기서는 시간 제한 없이(혹은 5분 정도) 결과가 올 때까지 대기
     }
 
     /**
@@ -113,8 +104,4 @@ public class ChapterVectorService {
         chapterVectorRepository.save(chapterVector);
     }
 
-    @Transactional(readOnly = true)
-    public List<float[]> getChapterVectorsForBook(Long bookId) {
-        return chapterVectorRepository.findAllVectorsByBookId(bookId);
-    }
 }

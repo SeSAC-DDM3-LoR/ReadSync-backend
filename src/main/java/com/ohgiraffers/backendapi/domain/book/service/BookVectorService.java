@@ -9,6 +9,7 @@ import com.ohgiraffers.backendapi.domain.book.repository.BookVectorRepository;
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
 import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVector;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
+import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterVectorRepository;
 import com.ohgiraffers.backendapi.domain.chapter.service.ChapterVectorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,8 +29,8 @@ public class BookVectorService {
 
     private final BookVectorRepository bookVectorRepository;
     private final BookRepository bookRepository;
-    private final ChapterVectorService chapterVectorService;
     private final ChapterRepository chapterRepository;
+    private final ChapterVectorRepository chapterVectorRepository;
 
     /**
      * 특정 도서 ID를 기준으로 유사한 도서를 추천합니다.
@@ -95,7 +97,8 @@ public class BookVectorService {
         }
         List<Integer> paragraphCounts = chapters.stream().map(Chapter::getParagraphs).toList();
 
-        List<float[]> chapterVectors = chapterVectorService.getChapterVectorsForBook(bookId);
+//        List<float[]> chapterVectors = getChapterVectorsForBook(bookId);
+        List<float[]> chapterVectors = chapterVectorRepository.findAllVectorsByBookId(bookId);
         if (chapterVectors.isEmpty()) {
             throw new RuntimeException("임베딩된 챕터가 없어 북 벡터를 생성할 수 없습니다.");
         }
@@ -162,4 +165,31 @@ public class BookVectorService {
         }
         return vector;
     }
+
+//    @Transactional(readOnly = true)
+//    public List<float[]> getChapterVectorsForBook(Long bookId) {
+//        // 1. DB에서 문자열 형태로 가져오기
+//        List<String> vectorStrings = chapterVectorRepository.findAllVectorsByBookId(bookId);
+//
+//        if (vectorStrings == null || vectorStrings.isEmpty()) {
+//            return Collections.emptyList();
+//        }
+//
+//        // 2. 문자열을 float 배열로 수동 파싱
+//        return vectorStrings.stream()
+//                .map(this::parseVectorString)
+//                .collect(Collectors.toList());
+//    }
+//
+//    private float[] parseVectorString(String vectorStr) {
+//        // PostgreSQL vector 포맷인 "[0.1,0.2,...]"에서 대괄호 제거 후 쉼표로 분리
+//        String cleanStr = vectorStr.replace("[", "").replace("]", "");
+//        String[] parts = cleanStr.split(",");
+//
+//        float[] vector = new float[parts.length];
+//        for (int i = 0; i < parts.length; i++) {
+//            vector[i] = Float.parseFloat(parts[i].trim());
+//        }
+//        return vector;
+//    }
 }

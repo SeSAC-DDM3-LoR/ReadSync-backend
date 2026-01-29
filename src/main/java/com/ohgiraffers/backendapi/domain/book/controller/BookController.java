@@ -3,6 +3,7 @@ package com.ohgiraffers.backendapi.domain.book.controller;
 import com.ohgiraffers.backendapi.domain.book.dto.BookRequestDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookResponseDTO;
 import com.ohgiraffers.backendapi.domain.book.service.BookService;
+import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,16 +32,14 @@ public class BookController {
         return ResponseEntity.ok(bookService.createBook(request));
     }
 
-    @Operation(summary = "[공통] 도서 단건 조회", description = "ID를 통해 특정 도서의 상세 정보를 조회합니다.")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Operation(summary = "[공개] 도서 단건 조회", description = "ID를 통해 특정 도서의 상세 정보를 조회합니다.")
     @GetMapping("/{bookId}")
     public ResponseEntity<BookResponseDTO> getBook(
             @Parameter(description = "도서 고유 번호") @PathVariable Long bookId) {
         return ResponseEntity.ok(bookService.getBook(bookId));
     }
 
-    @Operation(summary = "[공통] 도서 목록 전체 조회", description = "등록된 모든 도서 목록을 페이징하여 가져옵니다.")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Operation(summary = "[공개] 도서 목록 전체 조회", description = "등록된 모든 도서 목록을 페이징하여 가져옵니다.")
     @GetMapping
     public ResponseEntity<Page<BookResponseDTO>> getAllBooks(
             @PageableDefault(size = 10) Pageable pageable) {
@@ -67,12 +66,19 @@ public class BookController {
 
     // --- 추가 제안 엔드포인트 ---
 
-    @Operation(summary = "[공통] 도서 검색 페이징", description = "키워드로 도서를 검색하고 페이징 결과를 반환합니다.")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Operation(summary = "[공개] 도서 검색 페이징", description = "키워드로 도서를 검색하고 페이징 결과를 반환합니다.")
     @GetMapping("/search")
     public ResponseEntity<Page<BookResponseDTO>> searchBooks(
             @RequestParam(name = "keyword") String keyword,
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(bookService.searchBooks(keyword, pageable));
+    }
+
+    @Operation(summary = "[공통] 구매한 도서 목록 조회", description = "로그인한 사용자가 구매한 도서 목록을 최신순으로 조회합니다.")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/purchased")
+    public ResponseEntity<List<BookResponseDTO>> getPurchasedBooks(
+            @Parameter(hidden = true) @CurrentUserId Long userId) {
+        return ResponseEntity.ok(bookService.getPurchasedBooks(userId));
     }
 }

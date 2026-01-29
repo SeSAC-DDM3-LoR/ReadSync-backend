@@ -63,6 +63,7 @@ public enum ErrorCode {
 
     // 서재
     LIBRARY_NOT_FOUND(HttpStatus.NOT_FOUND, "L001", "서재에 존재하지 않는 책입니다."),
+    ALREADY_OWNED_BOOK(HttpStatus.CONFLICT, "L002", "이미 소유하고 있는 책입니다."),
 
     // 독서룸
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 독서룸입니다."),
@@ -107,7 +108,14 @@ public enum ErrorCode {
     AI_CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "AI002", "해당 AI 채팅 메시지를 찾을 수 없습니다."),
     AI_CHAT_NOT_OWNER(HttpStatus.FORBIDDEN, "AI003", "해당 채팅방의 소유자가 아닙니다."),
     AI_SERVER_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "AI004", "AI 서버와 통신 중 오류가 발생했습니다."),
-    AI_RATING_INVALID(HttpStatus.BAD_REQUEST, "AI005", "평점은 1~5 사이의 값이어야 합니다.");
+    AI_RATING_INVALID(HttpStatus.BAD_REQUEST, "AI005", "평점은 1~5 사이의 값이어야 합니다."),
+
+    // RAG 임베딩
+    RAG_INVALID_DRIVE_LINK(HttpStatus.BAD_REQUEST, "RAG001", "유효하지 않은 구글 드라이브 링크입니다."),
+    RAG_CONTENT_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "RAG002", "파일 내용을 파싱하는 중 오류가 발생했습니다."),
+    RAG_UNSUPPORTED_URL(HttpStatus.BAD_REQUEST, "RAG003", "지원하지 않는 URL 형식입니다."),
+    RAG_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "RAG004", "다운로드된 데이터에 'content' 필드가 없습니다."),
+    RAG_EMBEDDING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "RAG005", "임베딩 생성에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -26,9 +26,16 @@ public class LibraryController {
 
     @Operation(summary = "[공통] 서재에 도서 추가", description = "특정 도서를 내 서재에 담습니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @PostMapping
-    public ResponseEntity<Long> addToLibrary(@RequestBody LibraryRequestDTO request) {
-        return ResponseEntity.ok(libraryService.addToLibrary(request));
+    @PostMapping("/me")
+    public ResponseEntity<Long> addToMyLibrary(@CurrentUserId Long userId, @RequestBody LibraryRequestDTO request) {
+        return ResponseEntity.ok(libraryService.addToLibrary(userId, request));
+    }
+
+    @Operation(summary = "[관리자] 서재에 도서 추가", description = "특정 도서를 유저 서재에 담습니다.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{userId}")
+    public ResponseEntity<Long> addToOtherLibrary(@PathVariable Long userId, @RequestBody LibraryRequestDTO request) {
+        return ResponseEntity.ok(libraryService.addToLibrary(userId, request));
     }
 
     @Operation(summary = "[공통] 타 유저 서재 조회 (페이징)", description = "특정 유저의 서재 목록을 조회합니다.")
@@ -41,7 +48,7 @@ public class LibraryController {
     }
 
     @Operation(summary = "[사용자] 내 서재 조회 (페이징)", description = "현재 로그인한 사용자의 서재 목록을 조회합니다.")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/me")
     public ResponseEntity<Page<LibraryResponseDTO>> getMyBookLog(
             @CurrentUserId Long userId,
