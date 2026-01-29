@@ -347,15 +347,62 @@ public class ChapterService {
         }
     }
 
-    // 저장된 파일 경로에서 JSON Node 읽기
+    // 저장된 파일 경로에서 JSON Node 읽기 (로컬 파일 또는 외부 URL)
     private JsonNode readFileToJsonNode(String filePath) {
-        // HTTP URL인 경우 (S3 등)
+        // HTTP URL인 경우 (S3, Google Drive 등)
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-            // TODO: 필요 시 WebClient나 URLConnection으로 외부 파일 내용을 읽어오는 로직 추가 가능
-            // 현재는 "내용을 로컬에서 읽을 수 없음"으로 처리
-            throw new CustomException(ErrorCode.FILE_NOT_FOUND, "외부 URL 컨텐츠는 직접 다운로드해주세요.");
+            try {
+                log.info("외부 URL에서 콘텐츠 다운로드 시도: {}", filePath);
+
+                // RestTemplate을 UTF-8 인코딩으로 설정
+                org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+
+                // UTF-8 인코딩을 위한 StringHttpMessageConverter 설정
+                java.util.List<org.springframework.http.converter.HttpMessageConverter<?>> messageConverters = new java.util.ArrayList<>();
+                org.springframework.http.converter.StringHttpMessageConverter stringConverter = new org.springframework.http.converter.StringHttpMessageConverter(
+                        java.nio.charset.StandardCharsets.UTF_8);
+                stringConverter.setWriteAcceptCharset(false); // Accept-Charset 헤더 비활성화
+                messageConverters.add(stringConverter);
+                messageConverters
+                        .add(new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter());
+                restTemplate.setMessageConverters(messageConverters);
+
+                // Google Drive URL 변환 처리
+                String downloadUrl = filePath;
+                if (filePath.contains("drive.google.com")) {
+                    downloadUrl = convertGoogleDriveUrl(filePath);
+                    log.info("Google Drive URL 변환: {} -> {}", filePath, downloadUrl);
+                }
+
+                // UTF-8로 인코딩된 응답 받기
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.setAccept(java.util.Arrays.asList(org.springframework.http.MediaType.APPLICATION_JSON));
+                headers.set("Accept-Charset", "UTF-8");
+
+                org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+                org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(
+                        downloadUrl,
+                        org.springframework.http.HttpMethod.GET,
+                        entity,
+                        String.class);
+
+                String jsonContent = response.getBody();
+                if (jsonContent == null || jsonContent.isEmpty()) {
+                    throw new CustomException(ErrorCode.FILE_NOT_FOUND, "URL에서 콘텐츠를 가져올 수 없습니다.");
+                }
+
+                log.info("콘텐츠 다운로드 성공: {} bytes", jsonContent.length());
+                return objectMapper.readTree(jsonContent);
+            } catch (IOException e) {
+                log.error("URL 콘텐츠 파싱 실패: {}", filePath, e);
+                throw new CustomException(ErrorCode.FILE_READ_ERROR, "URL 콘텐츠 파싱 오류: " + e.getMessage());
+            } catch (Exception e) {
+                log.error("URL 콘텐츠 다운로드 실패: {}", filePath, e);
+                throw new CustomException(ErrorCode.FILE_NOT_FOUND, "URL에서 파일을 다운로드할 수 없습니다: " + e.getMessage());
+            }
         }
 
+        // 로컬 파일인 경우
         try {
             Path path = Paths.get(filePath);
             if (!Files.exists(path)) {
@@ -365,6 +412,32 @@ public class ChapterService {
         } catch (IOException e) {
             throw new CustomException(ErrorCode.FILE_READ_ERROR, e.getMessage());
         }
+    }
+
+    /**
+     * Google Drive 공유 URL을 직접 다운로드 URL로 변환
+     * 
+     * @param url Google Drive 공유 URL
+     * @return 변환된 다운로드 URL
+     */
+    private String convertGoogleDriveUrl(String url) {
+        // 형식: https://drive.google.com/file/d/{FILE_ID}/view?usp=sharing
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/d/([a-zA-Z0-9_-]+)");
+        java.util.regex.Matcher matcher = pattern.matcher(url);
+        if (matcher.find()) {
+            String fileId = matcher.group(1);
+            return "https://drive.google.com/uc?export=download&id=" + fileId;
+        }
+
+        // 형식: https://drive.google.com/open?id={FILE_ID}
+        pattern = java.util.regex.Pattern.compile("[?&]id=([a-zA-Z0-9_-]+)");
+        matcher = pattern.matcher(url);
+        if (matcher.find()) {
+            String fileId = matcher.group(1);
+            return "https://drive.google.com/uc?export=download&id=" + fileId;
+        }
+
+        return url; // 변환 불가시 원본 반환
     }
 
     // 엔티티 -> Response DTO 변환
