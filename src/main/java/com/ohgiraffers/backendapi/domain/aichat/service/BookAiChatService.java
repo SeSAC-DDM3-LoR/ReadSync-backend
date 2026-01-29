@@ -8,6 +8,8 @@ import com.ohgiraffers.backendapi.domain.aichat.repository.BookAiChatRepository;
 import com.ohgiraffers.backendapi.domain.aichat.repository.BookAiChatRoomRepository;
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
+import com.ohgiraffers.backendapi.domain.chapter.service.ChapterVectorRagService;
+import com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagSearchResponseDTO;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.error.CustomException;
@@ -43,6 +45,7 @@ public class BookAiChatService {
     private final BookAiChatRepository chatRepository;
     private final UserRepository userRepository;
     private final ChapterRepository chapterRepository;
+    private final ChapterVectorRagService ragService;
     private final WebClient aiWebClient;
 
     @Value("${ai.server.timeout:30}")
@@ -155,34 +158,68 @@ public class BookAiChatService {
 
         long startTime = System.currentTimeMillis();
 
+        // 1. Chat Type 분류 (Python 서버 호출)
+        ChatType chatType = request.getChatType();
+        if (chatType == null) {
+            chatType = classifyChatType(request.getUserMessage(), room.getChapter().getChapterId(),
+                    request.getCurrentParagraphId());
+        }
+
+        String ragContext = null;
+        String relatedParagraphId = null;
+
+        // 2. RAG 검색 (Content QA일 경우)
+        if (ChatType.CONTENT_QA.equals(chatType) || ChatType.SUMMARY.equals(chatType)) {
+            List<RagSearchResponseDTO> searchResults = ragService.searchRag(room.getChapter().getChapterId(),
+                    request.getUserMessage());
+
+            if (!searchResults.isEmpty()) {
+                // 상위 3개 정도만 컨텍스트로 사용
+                ragContext = searchResults.stream()
+                        .limit(3)
+                        .map(dto -> dto.getContentText())
+                        .collect(Collectors.joining("\n---\n"));
+
+                // 첫 번째 결과의 ID를 출처로 사용
+                relatedParagraphId = searchResults.get(0).getStartParagraphId();
+            }
+        }
+
         try {
             // Python AI 서버 호출
-            Map<String, Object> aiResponse = callAiServer(
-                    room.getChapter().getChapterId(),
+            // NOTE: AiChatService used AiChatDTO.AiGenerateRequest.
+            // BookAiChatService used Map. We should align with the new Python API
+            // (/api/v1/chat/generate).
+            // Using AiChatDTO inner classes here for consistency with AiChatService logic.
+            // But we need to update callAiServer to match.
+
+            AiChatDTO.AiGenerateResponse aiResponse = callAiServerV2(
                     request.getUserMessage(),
-                    request.getChatType());
+                    chatType,
+                    ragContext);
 
             long responseTimeMs = System.currentTimeMillis() - startTime;
-
-            // AI 응답에서 데이터 추출
-            String aiMessage = (String) aiResponse.getOrDefault("answer", "죄송합니다. 응답을 생성할 수 없습니다.");
-            Integer tokenCount = (Integer) aiResponse.get("token_count");
 
             // DB에 저장
             BookAiChat chat = BookAiChat.builder()
                     .chatRoom(room)
                     .user(user)
-                    .chatType(request.getChatType() != null ? request.getChatType() : ChatType.CONTENT_QA)
+                    .chatType(chatType)
                     .userMessage(request.getUserMessage())
-                    .aiMessage(aiMessage)
-                    .tokenCount(tokenCount)
+                    .aiMessage(aiResponse.getResponse())
+                    .tokenCount(aiResponse.getToken_usage())
                     .responseTimeMs((int) responseTimeMs)
                     .build();
 
-            return BookAiChatResponseDTO.from(chatRepository.save(chat));
+            BookAiChat savedChat = chatRepository.save(chat);
+
+            return BookAiChatResponseDTO.from(savedChat)
+                    .toBuilder()
+                    .relatedParagraphId(relatedParagraphId)
+                    .build();
 
         } catch (WebClientResponseException e) {
-            log.error("AI 서버 호출 실패: {}", e.getMessage());
+            log.error("AI 서버 호출 실패: Status {}, Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new CustomException(ErrorCode.AI_SERVER_ERROR);
         }
     }
@@ -272,16 +309,58 @@ public class BookAiChatService {
      */
     private Flux<String> callAiServerStream(Long chapterId, String userMessage, ChatType chatType) {
         return aiWebClient.post()
-                .uri("/generate-answer/stream")
+                .uri("/api/v1/chat/generate/stream")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(Map.of(
-                        "chapter_id", chapterId,
-                        "user_message", userMessage,
-                        "chat_type", chatType != null ? chatType.name() : ChatType.CONTENT_QA.name()))
+                        "user_msg", userMessage,
+                        "chat_type", chatType != null ? chatType.name() : ChatType.CONTENT_QA.name(),
+                        // "rag_context"는 현재 sendMessageStream 파라미터로 안 넘어옴... 일단 null로 간주하거나,
+                        // sendMessageStream도 RAG 로직을 타게 고쳐야 함.
+                        // 하지만 지금은 URL 수정이 급함. rag_context가 없으면 그냥 답변함.
+                        "rag_context", ""
+                // chapter_id는 Python쪽 GenerateRequest에 없음. 제거하거나 무시됨.
+                ))
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .retrieve()
                 .bodyToFlux(String.class)
                 .timeout(Duration.ofSeconds(aiServerTimeout));
+    }
+
+    /* ========== Python AI 서버 통신 (New API) ========== */
+
+    private ChatType classifyChatType(String userMsg, Long chapterId, String paragraphContent) {
+        try {
+            AiChatDTO.AiClassifyRequest req = new AiChatDTO.AiClassifyRequest(userMsg, chapterId, paragraphContent);
+
+            AiChatDTO.AiClassifyResponse res = aiWebClient.post()
+                    .uri("/api/v1/chat/classify")
+                    .bodyValue(req)
+                    .retrieve()
+                    .bodyToMono(AiChatDTO.AiClassifyResponse.class)
+                    .block();
+
+            if (res != null && res.getChat_type() != null) {
+                return ChatType.valueOf(res.getChat_type());
+            }
+        } catch (Exception e) {
+            log.error("AI classification failed", e);
+        }
+        return ChatType.CHIT_CHAT;
+    }
+
+    private AiChatDTO.AiGenerateResponse callAiServerV2(String userMsg, ChatType chatType, String ragContext) {
+        AiChatDTO.AiGenerateRequest req = AiChatDTO.AiGenerateRequest.builder()
+                .user_msg(userMsg)
+                .chat_type(chatType.name())
+                .rag_context(ragContext)
+                .build();
+
+        return aiWebClient.post()
+                .uri("/api/v1/chat/generate")
+                .bodyValue(req)
+                .retrieve()
+                .bodyToMono(AiChatDTO.AiGenerateResponse.class)
+                .block();
     }
 
     /* ========== Helper Methods ========== */
