@@ -7,6 +7,7 @@ import com.ohgiraffers.backendapi.domain.exp.entity.ExpRule;
 import com.ohgiraffers.backendapi.domain.exp.enums.ActivityType;
 import com.ohgiraffers.backendapi.domain.exp.repository.ExpLogRepository;
 import com.ohgiraffers.backendapi.domain.exp.repository.ExpRuleRepository;
+import com.ohgiraffers.backendapi.domain.level.service.LevelService;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class ExpLogService {
     private final ExpLogRepository expLogRepository;
     private final ExpRuleRepository expRuleRepository;
     private final UserRepository userRepository;
+    private final LevelService levelService;
 
     private ExpRule findAppropriateRule(ActivityType type, Long categoryId) {
         if (categoryId != null) {
@@ -54,7 +56,8 @@ public class ExpLogService {
         ExpLog expLog = requestDTO.toEntity(user, rule);
         ExpLog savedLog = expLogRepository.save(expLog);
 
-        user.getUserInformation().addExperience(rule.getExp());
+        // LevelService를 통해 경험치 추가 및 레벨업 체크
+        levelService.addExperienceAndCheckLevelUp(user.getId(), rule.getExp());
 
         return ExpLogResponseDTO.from(savedLog);
     }
