@@ -51,6 +51,9 @@ public class Library extends BaseTimeEntity {
     @Column(name = "total_read_paragraphs")
     private Integer totalReadParagraphs;
 
+    @Column(name = "last_read_chapter_id")
+    private Long lastReadChapterId;
+
     public void incrementReadCount(int count) {
         if (this.totalReadParagraphs == null) {
             this.totalReadParagraphs = 0;
@@ -68,5 +71,9 @@ public class Library extends BaseTimeEntity {
         // new BigDecimal(double) 보다는 BigDecimal.valueOf(double)이 정밀도 면에서 훨씬 안전합니다.
         this.totalProgress = BigDecimal.valueOf(overallProgress)
                 .setScale(2, RoundingMode.HALF_UP); // 소수점 2자리 반올림
+    }
+
+    public void updateLastReadChapter(Long chapterId) {
+        this.lastReadChapterId = chapterId;
     }
 }

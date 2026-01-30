@@ -86,6 +86,7 @@ CREATE TABLE "libraries" (
     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
     "expires_at" TIMESTAMP NULL,
     "reading_status" VARCHAR(20) NOT NULL,
+    "last_read_chapter_id" BIGINT NULL ,
     "total_read_paragraphs" INT NULL,
     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
     CONSTRAINT "PK_LIBRARIES" PRIMARY KEY ("library_id")

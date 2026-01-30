@@ -43,6 +43,11 @@ public class ReadingEventListener {
                     result.newlyReadCount() // 0이어도 상관없음 (기존 로그에 시간만 누적됨)
             ));
 
+            libraryService.saveLastChapter(
+                    event.getLibraryId(),
+                    event.getChapterId()
+            );
+
             if (result.newlyReadCount() > 0) {
                 userPreferenceService.updatePreferenceByIncrement(
                         event.getUserId(),

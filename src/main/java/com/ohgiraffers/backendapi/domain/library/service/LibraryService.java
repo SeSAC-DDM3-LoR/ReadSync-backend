@@ -98,4 +98,10 @@ public class LibraryService {
 
         return library;
     }
+
+    public void saveLastChapter(Long libraryId, Long chapterId) {
+        Library library = libraryRepository.findById(libraryId)
+                .orElseThrow(() -> new IllegalArgumentException("서재를 찾을 수 없습니다."));
+        library.updateLastReadChapter(chapterId);
+    }
 }
