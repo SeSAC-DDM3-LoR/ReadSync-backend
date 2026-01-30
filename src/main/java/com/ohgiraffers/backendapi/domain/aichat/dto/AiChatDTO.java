@@ -63,7 +63,8 @@ public class AiChatDTO {
         private String user_msg;
         private String chat_type;
         private String rag_context;
-        // previous_messages 등 필요 시 추가
+        // previous_messages: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+        private java.util.List<java.util.Map<String, String>> previous_messages;
     }
 
     @Getter
