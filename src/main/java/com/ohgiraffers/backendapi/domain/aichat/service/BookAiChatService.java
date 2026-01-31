@@ -165,13 +165,21 @@ public class BookAiChatService {
                     request.getCurrentParagraphId());
         }
 
-        String ragContext = null;
+        // 2. RAG 검색 및 쿼리 재작성
+        String ragContext = "";
         String relatedParagraphId = null;
+        String searchQuery = request.getUserMessage();
 
-        // 2. RAG 검색 (Content QA일 경우)
-        if (ChatType.CONTENT_QA.equals(chatType) || ChatType.SUMMARY.equals(chatType)) {
+        // 문맥이 필요한 질문이면 쿼리 재작성 시도
+        if (ChatType.CONTENT_QA_CONTEXT.equals(chatType)) {
+            searchQuery = rewriteQueryIfNeeded(room, request.getUserMessage());
+            // 재작성 후에는 일반 QA로 취급하여 처리 (선택 사항)
+        }
+
+        if (ChatType.CONTENT_QA.equals(chatType) || ChatType.CONTENT_QA_CONTEXT.equals(chatType)
+                || ChatType.SUMMARY.equals(chatType)) {
             List<RagSearchResponseDTO> searchResults = ragService.searchRag(room.getChapter().getChapterId(),
-                    request.getUserMessage());
+                    searchQuery);
 
             if (!searchResults.isEmpty()) {
                 // 상위 3개 정도만 컨텍스트로 사용
@@ -236,14 +244,44 @@ public class BookAiChatService {
         long startTime = System.currentTimeMillis();
         StringBuilder fullResponse = new StringBuilder();
 
+        // 1. Chat Type 분류 (스트리밍에서도 분류 필요)
+        ChatType detectedChatType = request.getChatType();
+        if (detectedChatType == null) {
+            detectedChatType = classifyChatType(request.getUserMessage(), room.getChapter().getChapterId(),
+                    request.getCurrentParagraphId());
+        }
+        final ChatType chatType = detectedChatType; // for lambda
+
+        // 2. RAG 검색 및 쿼리 재작성 (스트리밍 전 동기 처리)
+        String ragContext = "";
+        String searchQuery = request.getUserMessage();
+
+        if (ChatType.CONTENT_QA_CONTEXT.equals(chatType)) {
+            searchQuery = rewriteQueryIfNeeded(room, request.getUserMessage());
+        }
+
+        if (ChatType.CONTENT_QA.equals(chatType) || ChatType.CONTENT_QA_CONTEXT.equals(chatType)
+                || ChatType.SUMMARY.equals(chatType)) {
+            List<RagSearchResponseDTO> searchResults = ragService.searchRag(room.getChapter().getChapterId(),
+                    searchQuery);
+            if (!searchResults.isEmpty()) {
+                ragContext = searchResults.stream()
+                        .limit(3)
+                        .map(dto -> dto.getContentText())
+                        .collect(Collectors.joining("\n---\n"));
+            }
+        }
+        final String finalRagContext = ragContext; // for lambda
+
         // 이전 대화 내역 조회
         List<Map<String, String>> previousMessages = getPreviousMessages(room);
 
         return callAiServerStream(
                 room.getChapter().getChapterId(),
                 request.getUserMessage(),
-                request.getChatType(),
-                previousMessages)
+                chatType,
+                previousMessages,
+                finalRagContext) // ragContext 추가 전달
                 .doOnNext(chunk -> fullResponse.append(chunk))
                 .doOnComplete(() -> {
                     long responseTimeMs = System.currentTimeMillis() - startTime;
@@ -252,7 +290,7 @@ public class BookAiChatService {
                     BookAiChat chat = BookAiChat.builder()
                             .chatRoom(room)
                             .user(user)
-                            .chatType(request.getChatType() != null ? request.getChatType() : ChatType.CONTENT_QA)
+                            .chatType(chatType)
                             .userMessage(request.getUserMessage())
                             .aiMessage(fullResponse.toString())
                             .responseTimeMs((int) responseTimeMs)
@@ -310,7 +348,7 @@ public class BookAiChatService {
      * Python AI 서버 호출 (SSE 스트리밍)
      */
     private Flux<String> callAiServerStream(Long chapterId, String userMessage, ChatType chatType,
-            List<Map<String, String>> previousMessages) {
+            List<Map<String, String>> previousMessages, String ragContext) {
         return aiWebClient.post()
                 .uri("/api/v1/chat/generate/stream")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -318,12 +356,7 @@ public class BookAiChatService {
                         "user_msg", userMessage,
                         "chat_type", chatType != null ? chatType.name() : ChatType.CONTENT_QA.name(),
                         "previous_messages", previousMessages != null ? previousMessages : List.of(),
-                        // "rag_context"는 현재 sendMessageStream 파라미터로 안 넘어옴... 일단 null로 간주하거나,
-                        // sendMessageStream도 RAG 로직을 타게 고쳐야 함.
-                        // 하지만 지금은 URL 수정이 급함. rag_context가 없으면 그냥 답변함.
-                        "rag_context", ""
-                // chapter_id는 Python쪽 GenerateRequest에 없음. 제거하거나 무시됨.
-                ))
+                        "rag_context", ragContext != null ? ragContext : ""))
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .retrieve()
                 .bodyToFlux(String.class)
@@ -367,6 +400,35 @@ public class BookAiChatService {
                 .retrieve()
                 .bodyToMono(AiChatDTO.AiGenerateResponse.class)
                 .block();
+    }
+
+    private String rewriteQueryIfNeeded(BookAiChatRoom room, String userMsg) {
+        try {
+            List<Map<String, String>> previousMessages = getPreviousMessages(room);
+            if (previousMessages.isEmpty()) {
+                return userMsg;
+            }
+
+            AiChatDTO.AiRewriteRequest req = AiChatDTO.AiRewriteRequest.builder()
+                    .user_msg(userMsg)
+                    .previous_messages(previousMessages)
+                    .build();
+
+            AiChatDTO.AiRewriteResponse res = aiWebClient.post()
+                    .uri("/api/v1/chat/rewrite-query")
+                    .bodyValue(req)
+                    .retrieve()
+                    .bodyToMono(AiChatDTO.AiRewriteResponse.class)
+                    .block();
+
+            if (res != null && res.getRewritten_query() != null) {
+                log.info("Query rewritten: '{}' -> '{}'", userMsg, res.getRewritten_query());
+                return res.getRewritten_query();
+            }
+        } catch (Exception e) {
+            log.warn("Query rewrite failed, using original query. Error: {}", e.getMessage());
+        }
+        return userMsg;
     }
 
     /* ========== Helper Methods ========== */
