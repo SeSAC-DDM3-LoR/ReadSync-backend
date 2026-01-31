@@ -122,6 +122,8 @@ public class ChapterService {
         String finalChapterName = requestDTO.getChapterName() != null ? requestDTO.getChapterName()
                 : "Untitled Chapter";
 
+        Integer finalParagraphs = requestDTO.getParagraphs() != null ? requestDTO.getParagraphs() : -1;
+
         // 4. 엔티티 생성 및 저장
         Chapter chapter = Chapter.builder()
                 .book(book)
@@ -129,6 +131,7 @@ public class ChapterService {
                 .sequence(finalSequence)
                 .bookContentPath(s3Url) // S3 URL 저장
                 .isEmbedded(false)
+                .paragraphs(finalParagraphs)
                 .build();
 
         Chapter savedChapter = chapterRepository.save(chapter);
@@ -247,6 +250,14 @@ public class ChapterService {
 
             // 엔티티 업데이트
             chapter.updateFile(s3Url);
+
+            // 파일이 변경되었고 paragraphs 정보가 있다면 업데이트
+            if (requestDTO.getParagraphs() != null) {
+                chapter.updateParagraphs(requestDTO.getParagraphs());
+            }
+        } else if (requestDTO.getParagraphs() != null) {
+            // 파일 변경 없어도 paragraphs 수동 수정 가능
+            chapter.updateParagraphs(requestDTO.getParagraphs());
         }
 
         // 2. 메타데이터 수정

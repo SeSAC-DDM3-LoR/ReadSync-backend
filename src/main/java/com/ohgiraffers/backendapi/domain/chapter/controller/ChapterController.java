@@ -71,12 +71,14 @@ public class ChapterController {
             @RequestPart(value = "file") MultipartFile file,
             @RequestParam(value = "bookId") Long bookId,
             @RequestParam(value = "chapterName", required = false) String chapterName,
-            @RequestParam(value = "sequence", required = false) Integer sequence) {
+            @RequestParam(value = "sequence", required = false) Integer sequence,
+            @RequestParam(value = "paragraphs", required = false) Integer paragraphs) {
         ChapterRequestDTO requestDTO = ChapterRequestDTO.builder()
                 .bookId(bookId)
                 .chapterName(chapterName)
                 .sequence(sequence)
                 .file(file)
+                .paragraphs(paragraphs)
                 .build();
 
         ChapterResponseDTO response = chapterService.createChapterS3(requestDTO);
@@ -118,11 +120,13 @@ public class ChapterController {
             @PathVariable("chapterId") Long chapterId,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "chapterName", required = false) String chapterName,
-            @RequestParam(value = "sequence", required = false) Integer sequence) {
+            @RequestParam(value = "sequence", required = false) Integer sequence,
+            @RequestParam(value = "paragraphs", required = false) Integer paragraphs) {
         ChapterRequestDTO requestDTO = ChapterRequestDTO.builder()
                 .chapterName(chapterName)
                 .sequence(sequence)
                 .file(file)
+                .paragraphs(paragraphs)
                 .build();
 
         ChapterResponseDTO response = chapterService.updateChapterS3(chapterId, requestDTO);

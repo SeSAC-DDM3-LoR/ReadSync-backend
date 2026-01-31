@@ -148,17 +148,26 @@
     <!-- 1. Authentication -->
     <div class="card">
         <h2>🔑 Authentication</h2>
-        <div class="form-group" style="display: flex; gap: 10px;">
-            <div style="flex-grow: 1;">
-                <label for="token">Bearer Token</label>
-                <input type="text" id="token" placeholder="Login to get token..." readonly
-                    style="background-color: #e9ecef;">
+        <div class="row">
+            <div class="col">
+                <label for="loginId">Login ID</label>
+                <input type="text" id="loginId" placeholder="admin">
             </div>
-            <div style="align-self: flex-end;">
-                <button onclick="autoLogin()" id="loginBtn">🔄 Re-Login</button>
+            <div class="col">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="password"
+                    style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            <div class="col" style="align-self: flex-end;">
+                <button onclick="manualLogin()" id="loginBtn">Login</button>
             </div>
         </div>
-        <p style="font-size: 0.9em; color: #666;" id="loginStatus">Waiting for auto-login...</p>
+        <div class="form-group" style="margin-top: 10px;">
+            <label for="token">Bearer Token (Result)</label>
+            <input type="text" id="token" placeholder="Token will appear here..." readonly
+                style="background-color: #e9ecef;">
+        </div>
+        <p style="font-size: 0.9em; color: #666;" id="loginStatus">Please login first.</p>
     </div>
 
     <div class="row">
@@ -242,16 +251,24 @@
             };
         }
 
-        // --- 1. Auto Login ---
-        async function autoLogin() {
-            log('Attempting auto-login as admin...');
+        // --- 1. Manual Login ---
+        async function manualLogin() {
+            const loginId = document.getElementById('loginId').value;
+            const password = document.getElementById('password').value;
+
+            if (!loginId || !password) {
+                alert('Input ID and Password');
+                return;
+            }
+
+            log(`Attempting login as ${loginId}...`);
             try {
                 const res = await fetch(`${AUTH_BASE}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        loginId: 'admin',
-                        password: '1234'
+                        loginId: loginId,
+                        password: password
                     })
                 });
 
@@ -261,20 +278,20 @@
                 const token = data.accessToken;
 
                 document.getElementById('token').value = token;
-                document.getElementById('loginStatus').innerHTML = '<span class="status-badge status-success">✅ Logged in as Admin</span>';
-                log('✅ Auto-login successful!');
+                document.getElementById('loginStatus').innerHTML = '<span class="status-badge status-success">✅ Logged in</span>';
+                log('✅ Login successful!');
 
                 // 로그인 성공 후 자동으로 파일 목록이나 챕터 목록 로딩 (선택)
                 // listFiles(); 
             } catch (e) {
                 document.getElementById('loginStatus').innerHTML = '<span class="status-badge status-error">❌ Login Failed</span>';
-                log(`❌ Auto-login failed: ${e.message}`);
-                // alert('Auto-login failed. Check console.');
+                log(`❌ Login failed: ${e.message}`);
+                // alert('Login failed. Check console.');
             }
         }
 
-        // 페이지 로드 시 자동 로그인 실행
-        window.onload = autoLogin;
+        // 페이지 로드 시 자동 로그인 삭제
+        // window.onload = autoLogin;
 
 
         // --- 2. S3 Explorer & Delete ---
