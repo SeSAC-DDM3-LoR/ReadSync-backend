@@ -4,6 +4,7 @@ import com.ohgiraffers.backendapi.domain.chapter.dto.ChapterRequestDTO;
 import com.ohgiraffers.backendapi.domain.chapter.dto.ChapterResponseDTO;
 import com.ohgiraffers.backendapi.domain.chapter.dto.ChapterUrlRequestDTO;
 import com.ohgiraffers.backendapi.domain.chapter.service.ChapterService;
+import com.ohgiraffers.backendapi.global.common.S3Service;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +17,25 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/v1/chapters")
 @RequiredArgsConstructor
-@Tag(name = "Chapter API", description = "도서 챕터 관리 및 뷰어 연동")
+@Tag(name = "Chapter", description = "도서 챕터 관리 및 뷰어 연동")
 public class ChapterController {
 
     private final ChapterService chapterService;
+    private final S3Service s3Service;
+
+    @Operation(summary = "[관리자] S3 버킷 목록 조회", description = "현재 계정의 모든 S3 버킷 목록을 조회합니다. (환경설정 AWS_BUCKET_NAME 확인용)")
+    @GetMapping("/s3/buckets")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<java.util.List<String>> listS3Buckets() {
+        return ResponseEntity.ok(s3Service.listBuckets());
+    }
+
+    @Operation(summary = "[관리자] S3 파일 목록 조회", description = "설정된 버킷 내의 모든 파일 목록을 조회합니다.")
+    @GetMapping("/s3/files")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<java.util.List<String>> listS3Files() {
+        return ResponseEntity.ok(s3Service.listFiles());
+    }
 
     @Operation(summary = "[Local] [관리자] 챕터 등록 (파일 업로드/테스트용)", description = "JSON 파일을 로컬 서버에 업로드하여 챕터를 생성. 메타데이터 미입력 시 파일에서 자동 추출.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

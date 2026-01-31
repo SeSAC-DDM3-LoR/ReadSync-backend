@@ -94,10 +94,10 @@ INSERT INTO "book_vectors" ("book_id", "vector", "created_at") VALUES
 
 -- [11] Chapters (챕터 정보 - Book 참조)
 INSERT INTO "chapters" ("book_id", "chapter_name", "sequence", "book_content_path", paragraphs) VALUES
-                                                                                                    (1, '1장', 1, 'https://drive.google.com/file/d/1GKS0nTkwUaH07YRAY0U0Tt0S6p-j_rD7/view?usp=sharing', 209),
-                                                                                                    (1, '2장', 2, 'https://drive.google.com/file/d/1EV21SYFQ4JAMfoWmiemz9Nc7a38us982/view?usp=sharing', 163),
-                                                                                                    (1, '3장', 3, 'https://drive.google.com/file/d/19ys8OlK3U9J3OiMO4m55CIQ4Fi8nhAU9/view?usp=sharing', 139),
-                                                                                                    (1, '4장', 4, 'https://drive.google.com/file/d/1L7Hbd27mVLx2UEErAj_T_qeaR3dLae4m/view?usp=sharing', 45),
+                                                                                                    (1, '1장', 1, 'https://readsync-storage-v1.s3.ap-northeast-2.amazonaws.com/book/만세전_chapter1.json', 209),
+                                                                                                    (1, '2장', 2, 'https://readsync-storage-v1.s3.ap-northeast-2.amazonaws.com/book/만세전_chapter2.json', 163),
+                                                                                                    (1, '3장', 3, 'https://readsync-storage-v1.s3.ap-northeast-2.amazonaws.com/book/만세전_chapter3.json', 139),
+                                                                                                    (1, '4장', 4, 'https://readsync-storage-v1.s3.ap-northeast-2.amazonaws.com/book/만세전_chapter4.json', 45),
                                                                                                     (2, '2장: 정규화', 2, '/path/db_ch2', -1),
                                                                                                     (2, '1장: 자바 입문', 1, '/path/java_ch1', -1),
                                                                                                     (2, '2장: 객체지향', 2, '/path/java_ch2', -1),

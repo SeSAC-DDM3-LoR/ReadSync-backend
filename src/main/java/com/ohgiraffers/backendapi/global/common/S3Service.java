@@ -10,9 +10,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Bucket;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * AWS S3 파일 서비스
@@ -26,9 +34,45 @@ import java.util.UUID;
 public class S3Service {
 
     private final S3Template s3Template;
+    private final S3Client s3Client; // AWS SDK v2 Client 주입
+    private final software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner; // Presigner 주입
 
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
+
+    /**
+     * S3 Presigned URL 생성 (비공개 객체 접근용)
+     *
+     * @param fileUrl 원본 S3 URL (전체 경로)
+     * @return 10분간 유효한 서명된 URL
+     */
+    public String getPresignedUrl(String fileUrl) {
+        try {
+            String splitStr = ".com/";
+            if (!fileUrl.contains(splitStr)) {
+                return fileUrl; // S3 URL이 아니면 원본 반환
+            }
+            String key = fileUrl.substring(fileUrl.lastIndexOf(splitStr) + splitStr.length());
+
+            software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest
+                    .builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+
+            software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest presignRequest = software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+                    .builder()
+                    .signatureDuration(java.time.Duration.ofMinutes(10)) // 10분 유효
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            return s3Presigner.presignGetObject(presignRequest).url().toString();
+
+        } catch (Exception e) {
+            log.error("Presigned URL 생성 실패: {}", e.getMessage());
+            return fileUrl; // 실패 시 원본 반환 (클라이언트에서 403 받도록)
+        }
+    }
 
     /**
      * S3에 파일 업로드
@@ -70,5 +114,32 @@ public class S3Service {
             log.error("S3 Delete Failed: {}", e.getMessage());
             // 삭제 실패는 로그만 남기고 예외를 던지지 않음 (필요 시 FILE_DELETE_ERROR 사용 가능)
         }
+    }
+
+    /**
+     * 현재 계정의 모든 S3 버킷 목록 조회
+     *
+     * @return 버킷 이름 목록
+     */
+    public List<String> listBuckets() {
+        return s3Client.listBuckets().buckets().stream()
+                .map(Bucket::name)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 설정된 버킷 내의 모든 파일 목록 조회
+     *
+     * @return 파일 이름(Key) 목록
+     */
+    public List<String> listFiles() {
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(bucket)
+                .build();
+
+        ListObjectsV2Response result = s3Client.listObjectsV2(request);
+        return result.contents().stream()
+                .map(S3Object::key)
+                .collect(Collectors.toList());
     }
 }
