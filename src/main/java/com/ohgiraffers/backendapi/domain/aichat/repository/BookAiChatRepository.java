@@ -23,6 +23,13 @@ public interface BookAiChatRepository extends JpaRepository<BookAiChat, Long> {
     List<BookAiChat> findByChatRoomOrderByCreatedAtAsc(BookAiChatRoom chatRoom);
 
     /**
+     * 최근 대화 내역 5개 조회 (최신순)
+     * 질문+답변이 하나의 레코드라면 5개면 충분하지만, 여기선 하나의 레코드에 질문/답변이 다 있음.
+     * 따라서 최근 5개의 레코드를 가져오면 5쌍(총 10개 메시지)이 됨.
+     */
+    List<BookAiChat> findTop5ByChatRoomOrderByCreatedAtDesc(BookAiChatRoom chatRoom);
+
+    /**
      * 채팅방의 메시지 페이징 조회 (최신순)
      */
     Page<BookAiChat> findByChatRoom(BookAiChatRoom chatRoom, Pageable pageable);
