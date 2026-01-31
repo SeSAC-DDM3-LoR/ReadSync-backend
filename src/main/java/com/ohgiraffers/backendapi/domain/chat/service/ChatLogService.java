@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ public class ChatLogService {
 
     // Redis
     private final RedisTemplate<String, Object> redisTemplate;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 메시지 전송(DB 저장 -> Redis 채널에 뿌리기)
     @Transactional
@@ -61,25 +63,30 @@ public class ChatLogService {
             throw new CustomException(ErrorCode.ROOM_FINISHED);
         }
 
-        // Entity 생성
+        // 1. DB 저장 (기존 로직 유지)
         ChatLog chatLog;
         if (request.getImageUrl() != null) {
             chatLog = ChatLog.createImageMessage(readingRoom, user, request.getImageUrl());
         } else {
             chatLog = ChatLog.createTextMessage(readingRoom, user, request.getContent());
         }
-
         ChatLog savedChat = chatLogRepository.save(chatLog);
-
         ChatMessageResponse response = ChatMessageResponse.from(savedChat);
 
-        // Redis 채널에 뿌리기
-        String channel = "chatRoom:" + request.getRoomId();
+        // 2. [수정] 프론트엔드가 구독 중인 STOMP 경로로 메시지 전송
+        // 프론트엔드 구독 경로: websocketClient.subscribeToChatRoom -> /topic/chat/{roomId}
+        String destination = "/topic/chat/" + request.getRoomId();
 
-        // 객체 -> Json
-        redisTemplate.convertAndSend(channel, response);
+        messagingTemplate.convertAndSend(destination, response);
+        log.info("Message sent to STOMP Broker [{}]: {}", destination, response.getContent());
 
-        log.info("Message sent to Redis Channel [{}]: {}", channel, response.getContent());
+        // 3. [선택] Redis Pub/Sub (서버가 여러 대일 경우에만 필요)
+        // 단일 서버라면 아래 코드는 사실상 없어도 실시간 채팅은 동작합니다.
+        // 만약 멀티 서버 환경이라면 별도의 RedisSubscriber가 이 메시지를 받아서 다시 messagingTemplate으로 쏴줘야 합니다.
+        String redisChannel = "chatRoom:" + request.getRoomId();
+        redisTemplate.convertAndSend(redisChannel, response);
+        log.info("Message sent to Redis Channel [{}]: {}", redisChannel, response.getContent());
+
     }
 
     // 채팅방 입장 시 최근 메시지 로딩
