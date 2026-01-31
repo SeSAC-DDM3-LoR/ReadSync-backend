@@ -18,8 +18,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         System.out.println("[+] 최초 WebSocket 연결을 위한 등록 Handler");
-        // 1. 소켓 연결 엔드포인트: ws://localhost:8080/ws-stomp
-        registry.addEndpoint("/ws-stomp")
+        // 1. 소켓 연결 엔드포인트: ws://localhost:8080/ws
+        registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*") // 모든 출처 허용 (CORS 해결)
                 .withSockJS(); // SockJS 지원 (브라우저 호환성)
     }

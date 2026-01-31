@@ -293,4 +293,18 @@ public class ReadingRoomService {
                 })
                 .toList();
     }
+
+    /**
+     * 참여자 목록 조회
+     */
+    public List<com.ohgiraffers.backendapi.domain.readingroom.dto.ParticipantResponse> getParticipants(Long roomId) {
+        ReadingRoom room = getRoom(roomId);
+        List<RoomParticipant> participants = roomParticipantRepository
+                .findAllByReadingRoomAndConnectionStatus(room, ConnectionStatus.ACTIVE);
+
+        return participants.stream()
+                .map(participant -> com.ohgiraffers.backendapi.domain.readingroom.dto.ParticipantResponse
+                        .from(participant, room.getHost().getId()))
+                .toList();
+    }
 }

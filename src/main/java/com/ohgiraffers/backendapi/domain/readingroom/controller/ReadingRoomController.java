@@ -101,4 +101,30 @@ public class ReadingRoomController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "독서룸 목록 조회", description = "현재 활성화된 모든 독서룸 목록을 조회합니다.")
+    @GetMapping
+    public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse>> getRooms() {
+        java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse> rooms = readingRoomService
+                .getAllActiveRooms();
+        return ResponseEntity.ok(rooms);
+    }
+
+    @Operation(summary = "독서룸 상세 조회", description = "특정 독서룸의 상세 정보를 조회합니다.")
+    @GetMapping("/{roomId}")
+    public ResponseEntity<com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse> getRoom(
+            @PathVariable Long roomId) {
+        com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse room = readingRoomService
+                .getRoomDetail(roomId);
+        return ResponseEntity.ok(room);
+    }
+
+    @Operation(summary = "참여자 목록 조회", description = "특정 독서룸의 참여자 목록을 조회합니다.")
+    @GetMapping("/{roomId}/participants")
+    public ResponseEntity<java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.ParticipantResponse>> getParticipants(
+            @PathVariable Long roomId) {
+        java.util.List<com.ohgiraffers.backendapi.domain.readingroom.dto.ParticipantResponse> participants = readingRoomService
+                .getParticipants(roomId);
+        return ResponseEntity.ok(participants);
+    }
+
 }
