@@ -37,6 +37,14 @@ public class ChapterController {
         return ResponseEntity.ok(s3Service.listFiles());
     }
 
+    @Operation(summary = "[관리자] S3 파일 삭제 (직접 삭제)", description = "S3 URL 또는 키를 입력받아 파일을 직접 삭제합니다. (DB와 무관하게 삭제됨)")
+    @DeleteMapping("/s3/files")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteS3File(@RequestParam("fileUrl") String fileUrl) {
+        s3Service.deleteFile(fileUrl);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "[Local] [관리자] 챕터 등록 (파일 업로드/테스트용)", description = "JSON 파일을 로컬 서버에 업로드하여 챕터를 생성. 메타데이터 미입력 시 파일에서 자동 추출.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")

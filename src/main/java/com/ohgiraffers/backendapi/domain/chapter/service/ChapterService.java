@@ -114,7 +114,7 @@ public class ChapterService {
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOK_NOT_FOUND));
 
         // 2. S3 파일 저장
-        String s3Url = s3Service.uploadFile(requestDTO.getFile());
+        String s3Url = s3Service.uploadFile(requestDTO.getFile(), "book");
 
         // 3. 메타데이터 결정 (S3 방식은 파일 내용을 읽지 않고 입력받은 값 위주로 처리)
         // 만약 파일 내용을 읽어야 한다면, MultiPartFile 자체에서 InputStream으로 읽어서 처리 가능
@@ -243,7 +243,7 @@ public class ChapterService {
             s3Service.deleteFile(chapter.getBookContentPath());
 
             // 새 파일 저장
-            String s3Url = s3Service.uploadFile(requestDTO.getFile());
+            String s3Url = s3Service.uploadFile(requestDTO.getFile(), "book");
 
             // 엔티티 업데이트
             chapter.updateFile(s3Url);

@@ -54,6 +54,9 @@ public class S3Service {
             }
             String key = fileUrl.substring(fileUrl.lastIndexOf(splitStr) + splitStr.length());
 
+            // [Fix] URL 디코딩 추가 (한글 파일명의 경우 %EC... 형태로 들어오면 S3에서 찾지 못함)
+            key = java.net.URLDecoder.decode(key, java.nio.charset.StandardCharsets.UTF_8);
+
             software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest
                     .builder()
                     .bucket(bucket)
@@ -77,13 +80,16 @@ public class S3Service {
     /**
      * S3에 파일 업로드
      *
-     * @param file 업로드할 멀티파트 파일
+     * S3에 파일 업로드
+     *
+     * @param file       업로드할 멀티파트 파일
+     * @param folderName 저장할 폴더 이름 (예: "book")
      * @return 업로드된 파일의 S3 URL
      * @throws CustomException FILE_UPLOAD_ERROR 업로드 실패 시
      */
-    public String uploadFile(MultipartFile file) {
+    public String uploadFile(MultipartFile file, String folderName) {
         String originalFilename = file.getOriginalFilename();
-        String s3FileName = UUID.randomUUID().toString().substring(0, 10) + "_" + originalFilename;
+        String s3FileName = folderName + "/" + UUID.randomUUID().toString().substring(0, 10) + "_" + originalFilename;
 
         try (InputStream inputStream = file.getInputStream()) {
             s3Template.upload(bucket, s3FileName, inputStream,
