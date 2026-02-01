@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-
 @Service
 @RequiredArgsConstructor
 public class BookmarkService {
@@ -39,18 +38,19 @@ public class BookmarkService {
     private final LibraryService libraryService;
     private final LibraryRepository libraryRepository;
     private final ChapterRepository chapterRepository;
-    private final UserPreferenceService  userPreferenceService;
+    private final UserPreferenceService userPreferenceService;
     private final BookLogService bookLogService;
 
     private final Map<String, Integer> pendingCounts = new ConcurrentHashMap<>();
 
-    @Transactional
+    // @Transactional // ReadingEventListener에서 트랜잭션 관리
     public BookmarkUpdateResult saveOrUpdate(BookmarkRequestDTO dto) {
         // ... 기존 로직 유지 (Chapter 조회, Bookmark 확보, syncReadStatus 등)
         Chapter chapter = chapterRepository.findById(dto.getChapterId())
                 .orElseThrow(() -> new IllegalArgumentException("챕터가 없습니다."));
 
-        Bookmark bookmark = bookmarkRepository.findByLibrary_LibraryIdAndChapter_ChapterId(dto.getLibraryId(), dto.getChapterId())
+        Bookmark bookmark = bookmarkRepository
+                .findByLibrary_LibraryIdAndChapter_ChapterId(dto.getLibraryId(), dto.getChapterId())
                 .orElseGet(() -> {
                     Library library = libraryRepository.findById(dto.getLibraryId())
                             .orElseThrow(() -> new IllegalArgumentException("서재를 찾을 수 없습니다."));
@@ -70,7 +70,8 @@ public class BookmarkService {
         return new BookmarkUpdateResult(newlyReadCount, chapter.getParagraphs());
     }
 
-    public record BookmarkUpdateResult(int newlyReadCount, int chapterParagraphs) {}
+    public record BookmarkUpdateResult(int newlyReadCount, int chapterParagraphs) {
+    }
 
     @Transactional(readOnly = true)
     public BookmarkResponseDTO getBookmark(Long bookmarkId) {

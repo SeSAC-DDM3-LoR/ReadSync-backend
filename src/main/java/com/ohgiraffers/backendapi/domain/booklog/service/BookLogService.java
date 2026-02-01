@@ -27,7 +27,7 @@ public class BookLogService {
     private final LibraryRepository libraryRepository;
     private final UserRepository userRepository;
 
-    @EntityGraph(attributePaths = {"library", "library.user"})
+    @EntityGraph(attributePaths = { "library", "library.user" })
     public List<BookLogResponseDTO> findAllByUser(Long userId) {
 
         if (!userRepository.existsById(userId)) {
@@ -40,8 +40,7 @@ public class BookLogService {
                 .toList();
     }
 
-
-    @Transactional
+    // @Transactional // ReadingEventListener에서 트랜잭션 관리
     public BookLogResponseDTO saveOrUpdate(BookLogRequestDTO request) {
         LocalDate today = LocalDate.now();
 
@@ -57,7 +56,7 @@ public class BookLogService {
                     Library library = libraryRepository.findById(request.getLibraryId())
                             .orElseThrow(() -> new IllegalArgumentException("서재 정보를 찾을 수 없습니다."));
 
-//                    library.updateStatus(ReadingStatus.READING);
+                    // library.updateStatus(ReadingStatus.READING);
 
                     BookLog newLog = request.toEntity(library, today);
                     return BookLogResponseDTO.from(bookLogRepository.save(newLog));

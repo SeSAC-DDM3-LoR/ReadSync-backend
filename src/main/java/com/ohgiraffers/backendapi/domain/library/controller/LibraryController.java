@@ -56,16 +56,24 @@ public class LibraryController {
         return ResponseEntity.ok(libraryService.getUserLibrary(userId, pageable));
     }
 
-//    시스템 내부적으로 사용하기 때문에 주석 처리
-//    @Operation(summary = "[사용자] 독서 상태 변경", description = "서재에 담긴 도서의 읽기 상태(읽는 중, 완독 등)를 변경합니다.")
-//    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-//    @PatchMapping("/{libraryId}/status")
-//    public ResponseEntity<Void> updateStatus(
-//            @PathVariable Long libraryId,
-//            @RequestParam ReadingStatus status) {
-//        libraryService.updateReadingStatus(libraryId, status);
-//        return ResponseEntity.ok().build();
-//    }
+    @Operation(summary = "[공통] 서재 단건 조회", description = "libraryId로 서재 정보를 조회합니다.")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/{libraryId}")
+    public ResponseEntity<LibraryResponseDTO> getLibraryById(@PathVariable Long libraryId) {
+        return ResponseEntity.ok(libraryService.getLibraryById(libraryId));
+    }
+
+    // 시스템 내부적으로 사용하기 때문에 주석 처리
+    // @Operation(summary = "[사용자] 독서 상태 변경", description = "서재에 담긴 도서의 읽기 상태(읽는 중,
+    // 완독 등)를 변경합니다.")
+    // @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    // @PatchMapping("/{libraryId}/status")
+    // public ResponseEntity<Void> updateStatus(
+    // @PathVariable Long libraryId,
+    // @RequestParam ReadingStatus status) {
+    // libraryService.updateReadingStatus(libraryId, status);
+    // return ResponseEntity.ok().build();
+    // }
 
     @Operation(summary = "[공통] 서재 내 카테고리별 조회 (페이징)", description = "유저의 서재에서 특정 카테고리의 도서만 필터링하여 조회합니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")

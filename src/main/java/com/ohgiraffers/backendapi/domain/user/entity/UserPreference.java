@@ -1,6 +1,5 @@
 package com.ohgiraffers.backendapi.domain.user.entity;
 
-
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
 import com.ohgiraffers.backendapi.global.common.BaseVectorEntity;
 import jakarta.persistence.*;
@@ -30,13 +29,20 @@ public class UserPreference extends BaseVectorEntity {
 
     /**
      * 유저 취향(장기/단기) 통합 업데이트 메서드
-     * @param longTerm 새로운 장기 취향 벡터
+     * 
+     * @param longTerm  새로운 장기 취향 벡터
      * @param shortTerm 새로운 단기 취향 벡터
      */
     public void updateTaste(float[] longTerm, float[] shortTerm) {
         // BaseVectorEntity의 vector 필드를 장기 취향으로 사용
         super.updateVector(longTerm);
         this.shortTermVector = shortTerm;
+    }
+
+    public UserPreference(User user) {
+        this.user = user;
+        super.updateVector(new float[1024]);
+        this.shortTermVector = new float[1024];
     }
 
 }

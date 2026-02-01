@@ -49,6 +49,14 @@ public class LibraryService {
                 .map(LibraryResponseDTO::from);
     }
 
+    // 단건 조회: 특정 libraryId로 조회
+    public LibraryResponseDTO getLibraryById(Long libraryId) {
+        Library library = libraryRepository.findById(libraryId)
+                .filter(l -> l.getDeletedAt() == null)
+                .orElseThrow(() -> new IllegalArgumentException("서재 정보를 찾을 수 없습니다."));
+        return LibraryResponseDTO.from(library);
+    }
+
     @Transactional
     public void updateReadingStatus(Long libraryId, ReadingStatus status) {
         Library library = libraryRepository.findById(libraryId)
@@ -71,6 +79,7 @@ public class LibraryService {
         library.delete();
     }
 
+    // @Transactional // ReadingEventListener에서 트랜잭션 관리
     @AwardExp(type = ActivityType.READ_BOOK)
     public Library syncOverallProgress(Long libraryId, int newlyReadCount) {
         // 1. 서재와 연결된 도서(Book) 정보를 가져옵니다.
@@ -79,7 +88,7 @@ public class LibraryService {
 
         Integer totalParagraphs = library.getBook().getTotalParagraphs();
 
-        if (totalParagraphs == 0) {
+        if (totalParagraphs == null || totalParagraphs == 0) {
             return null;
         }
 
@@ -99,6 +108,7 @@ public class LibraryService {
         return library;
     }
 
+    // @Transactional // ReadingEventListener에서 트랜잭션 관리
     public void saveLastChapter(Long libraryId, Long chapterId) {
         Library library = libraryRepository.findById(libraryId)
                 .orElseThrow(() -> new IllegalArgumentException("서재를 찾을 수 없습니다."));

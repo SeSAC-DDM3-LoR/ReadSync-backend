@@ -52,10 +52,9 @@ public class Bookmark extends BaseTimeEntity {
         int newlyReadCount = 0; // 이번 호출에서 처음 읽게 된 문단 수
 
         for (Integer index : newIndices) {
+            // 범위를 벗어난 인덱스는 무시 (1 ~ paragraphs 범위만 허용)
             if (index < 1 || index > chapter.getParagraphs()) {
-                throw new IllegalArgumentException(
-                        String.format("잘못된 문단 번호: %d (1 ~ %d)", index, chapter.getParagraphs())
-                );
+                continue;
             }
 
             int setIndex = index - 1;
@@ -66,7 +65,7 @@ public class Bookmark extends BaseTimeEntity {
             }
         }
 
-//        String updatedMask = getString(newIndices);
+        // String updatedMask = getString(newIndices);
         this.readMask = sb.toString().getBytes(StandardCharsets.UTF_8);
         this.lastReadPos = lastReadPos;
 
@@ -88,8 +87,7 @@ public class Bookmark extends BaseTimeEntity {
             // 1. 유효성 검사: 1보다 작거나, 최대값(totalLength)보다 크면 예외 발생
             if (index < 1 || index > chapter.getParagraphs()) {
                 throw new IllegalArgumentException(
-                        String.format("잘못된 문단 번호입니다: %d (허용 범위: 1 ~ %d)", index, chapter.getParagraphs())
-                );
+                        String.format("잘못된 문단 번호입니다: %d (허용 범위: 1 ~ %d)", index, chapter.getParagraphs()));
             }
 
             // 2. 인덱스 보정: 사용자가 입력한 1~10을 0~9로 변환

@@ -34,7 +34,6 @@ public class BookmarkRequestDTO {
                 .build();
     }
 
-
     // 맨 처음 생성
     public Bookmark toEntity(Library library, Chapter chapter, byte[] initialMask) {
         return Bookmark.builder()

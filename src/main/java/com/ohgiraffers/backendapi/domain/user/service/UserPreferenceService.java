@@ -1,13 +1,14 @@
 package com.ohgiraffers.backendapi.domain.user.service;
 
-
 import com.ohgiraffers.backendapi.domain.book.entity.Book;
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
 import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVector;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterVectorRepository;
+import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.entity.UserPreference;
 import com.ohgiraffers.backendapi.domain.user.repository.UserPreferenceRepository;
+import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
@@ -22,17 +23,21 @@ public class UserPreferenceService {
     private final UserPreferenceRepository preferenceRepository;
     private final ChapterVectorRepository chapterVectorRepository;
     private final ChapterRepository chapterRepository;
+    private final UserRepository userRepository;
 
     // 기본 학습률 설정
-    private static final float ALPHA_LONG = 0.05f;  // 장기 취향 (천천히 변화)
+    private static final float ALPHA_LONG = 0.05f; // 장기 취향 (천천히 변화)
     private static final float ALPHA_SHORT = 0.3f; // 단기 취향 (빠르게 변화)
 
-    @Transactional
+    // @Transactional // ReadingEventListener에서 트랜잭션 관리
     public void updatePreferenceByIncrement(Long userId, Long chapterId, int newlyReadCount, int totalParagraphs) {
         // 1. 취향 벡터 로드
         UserPreference pref = preferenceRepository.findByUser_Id(userId)
-                .orElseThrow();
-//                .orElseGet(() -> createInitialPreference(userId));
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+                    return preferenceRepository.save(new UserPreference(user));
+                });
 
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
@@ -71,7 +76,8 @@ public class UserPreferenceService {
         // 코사인 유사도를 위해 L2 정규화 (길이를 1로 맞춤)
         float norm = (float) Math.sqrt(sumSq);
         if (norm > 1e-9) {
-            for (int i = 0; i < 1024; i++) newVec[i] /= norm;
+            for (int i = 0; i < 1024; i++)
+                newVec[i] /= norm;
         }
         return newVec;
     }
