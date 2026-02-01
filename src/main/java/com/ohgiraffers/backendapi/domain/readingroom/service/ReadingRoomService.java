@@ -40,6 +40,7 @@ public class ReadingRoomService {
     private final ExpLogService expLogService;
     private final UserStatusService userStatusService;
     private final ApplicationEventPublisher publisher;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     // 독서룸 생성
     @Transactional
@@ -113,6 +114,9 @@ public class ReadingRoomService {
 
         // 방 입장 시 상태를 '독서중'으로 변경
         userStatusService.updateUserStatus(userId, UserActivityStatus.READING);
+
+        // 실시간 참여자 업데이트 알림 전송
+        notifyParticipantUpdate(roomId);
     }
 
     // 방 퇴장
@@ -138,6 +142,8 @@ public class ReadingRoomService {
             room.finishRoom();
         } else {
             participant.leave();
+            // 실시간 참여자 업데이트 알림 전송
+            notifyParticipantUpdate(roomId);
         }
 
         // 방 퇴장 시 상태를 '온라인'으로 변경
@@ -154,6 +160,22 @@ public class ReadingRoomService {
         RoomParticipant targetParticipant = getParticipant(room, targetUser);
 
         targetParticipant.kick();
+
+        // 실시간 참여자 업데이트 알림 전송
+        notifyParticipantUpdate(roomId);
+    }
+
+    // 참여자 업데이트 알림 전송
+    private void notifyParticipantUpdate(Long roomId) {
+        try {
+            java.util.Map<String, Object> message = new java.util.HashMap<>();
+            message.put("type", "PARTICIPANT_UPDATE");
+            message.put("roomId", roomId);
+            messagingTemplate.convertAndSend("/topic/room/" + roomId, message);
+        } catch (Exception e) {
+            // 로깅 등 에러 처리 (필요시)
+            System.err.println("Failed to send participant update: " + e.getMessage());
+        }
     }
 
     // 재생속도 변경
