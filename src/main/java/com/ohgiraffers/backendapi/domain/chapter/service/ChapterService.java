@@ -114,13 +114,15 @@ public class ChapterService {
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOK_NOT_FOUND));
 
         // 2. S3 파일 저장
-        String s3Url = s3Service.uploadFile(requestDTO.getFile());
+        String s3Url = s3Service.uploadFile(requestDTO.getFile(), "book");
 
         // 3. 메타데이터 결정 (S3 방식은 파일 내용을 읽지 않고 입력받은 값 위주로 처리)
         // 만약 파일 내용을 읽어야 한다면, MultiPartFile 자체에서 InputStream으로 읽어서 처리 가능
         Integer finalSequence = requestDTO.getSequence() != null ? requestDTO.getSequence() : 1;
         String finalChapterName = requestDTO.getChapterName() != null ? requestDTO.getChapterName()
                 : "Untitled Chapter";
+
+        Integer finalParagraphs = requestDTO.getParagraphs() != null ? requestDTO.getParagraphs() : -1;
 
         // 4. 엔티티 생성 및 저장
         Chapter chapter = Chapter.builder()
@@ -129,6 +131,7 @@ public class ChapterService {
                 .sequence(finalSequence)
                 .bookContentPath(s3Url) // S3 URL 저장
                 .isEmbedded(false)
+                .paragraphs(finalParagraphs)
                 .build();
 
         Chapter savedChapter = chapterRepository.save(chapter);
@@ -249,10 +252,18 @@ public class ChapterService {
             s3Service.deleteFile(chapter.getBookContentPath());
 
             // 새 파일 저장
-            String s3Url = s3Service.uploadFile(requestDTO.getFile());
+            String s3Url = s3Service.uploadFile(requestDTO.getFile(), "book");
 
             // 엔티티 업데이트
             chapter.updateFile(s3Url);
+
+            // 파일이 변경되었고 paragraphs 정보가 있다면 업데이트
+            if (requestDTO.getParagraphs() != null) {
+                chapter.updateParagraphs(requestDTO.getParagraphs());
+            }
+        } else if (requestDTO.getParagraphs() != null) {
+            // 파일 변경 없어도 paragraphs 수동 수정 가능
+            chapter.updateParagraphs(requestDTO.getParagraphs());
         }
 
         // 2. 메타데이터 수정
@@ -355,7 +366,13 @@ public class ChapterService {
 
     // 저장된 파일 경로에서 JSON Node 읽기 (로컬 파일 또는 외부 URL)
     private JsonNode readFileToJsonNode(String filePath) {
-        // HTTP URL인 경우 (S3, Google Drive 등)
+        // [Optimized] AWS S3 URL인 경우 백엔드에서 다운로드하지 않고 건너뜀 (프론트엔드 직접 다운로드 유도)
+        if (filePath != null && filePath.contains("amazonaws.com")) {
+            log.info("S3 URL 접근 감지 - 백엔드 다운로드 스킵: {}", filePath);
+            return null;
+        }
+
+        // HTTP URL인 경우 (Google Drive 등)
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
             try {
                 log.info("외부 URL에서 콘텐츠 다운로드 시도: {}", filePath);
@@ -463,7 +480,8 @@ public class ChapterService {
                 .bookId(chapter.getBook().getBookId())
                 .chapterName(chapter.getChapterName())
                 .sequence(chapter.getSequence())
-                .bookContentPath(chapter.getBookContentPath())
+                // [Optimized] S3 URL인 경우 Presigned URL로 변환하여 전달 (보안 접근 허용)
+                .bookContentPath(s3Service.getPresignedUrl(chapter.getBookContentPath()))
                 .bookContent(content)
                 .paragraphs(chapter.getParagraphs())
                 .build();

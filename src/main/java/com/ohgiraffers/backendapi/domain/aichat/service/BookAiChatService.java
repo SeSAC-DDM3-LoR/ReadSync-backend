@@ -186,17 +186,15 @@ public class BookAiChatService {
         }
 
         try {
-            // Python AI 서버 호출
-            // NOTE: AiChatService used AiChatDTO.AiGenerateRequest.
-            // BookAiChatService used Map. We should align with the new Python API
-            // (/api/v1/chat/generate).
-            // Using AiChatDTO inner classes here for consistency with AiChatService logic.
-            // But we need to update callAiServer to match.
+            // 이전 대화 내역 조회 및 변환 function call
+            List<Map<String, String>> previousMessages = getPreviousMessages(room);
 
+            // Python AI 서버 호출
             AiChatDTO.AiGenerateResponse aiResponse = callAiServerV2(
                     request.getUserMessage(),
                     chatType,
-                    ragContext);
+                    ragContext,
+                    previousMessages);
 
             long responseTimeMs = System.currentTimeMillis() - startTime;
 
@@ -238,10 +236,14 @@ public class BookAiChatService {
         long startTime = System.currentTimeMillis();
         StringBuilder fullResponse = new StringBuilder();
 
+        // 이전 대화 내역 조회
+        List<Map<String, String>> previousMessages = getPreviousMessages(room);
+
         return callAiServerStream(
                 room.getChapter().getChapterId(),
                 request.getUserMessage(),
-                request.getChatType())
+                request.getChatType(),
+                previousMessages)
                 .doOnNext(chunk -> fullResponse.append(chunk))
                 .doOnComplete(() -> {
                     long responseTimeMs = System.currentTimeMillis() - startTime;
@@ -307,13 +309,15 @@ public class BookAiChatService {
     /**
      * Python AI 서버 호출 (SSE 스트리밍)
      */
-    private Flux<String> callAiServerStream(Long chapterId, String userMessage, ChatType chatType) {
+    private Flux<String> callAiServerStream(Long chapterId, String userMessage, ChatType chatType,
+            List<Map<String, String>> previousMessages) {
         return aiWebClient.post()
                 .uri("/api/v1/chat/generate/stream")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(Map.of(
                         "user_msg", userMessage,
                         "chat_type", chatType != null ? chatType.name() : ChatType.CONTENT_QA.name(),
+                        "previous_messages", previousMessages != null ? previousMessages : List.of(),
                         // "rag_context"는 현재 sendMessageStream 파라미터로 안 넘어옴... 일단 null로 간주하거나,
                         // sendMessageStream도 RAG 로직을 타게 고쳐야 함.
                         // 하지만 지금은 URL 수정이 급함. rag_context가 없으면 그냥 답변함.
@@ -348,11 +352,13 @@ public class BookAiChatService {
         return ChatType.CHIT_CHAT;
     }
 
-    private AiChatDTO.AiGenerateResponse callAiServerV2(String userMsg, ChatType chatType, String ragContext) {
+    private AiChatDTO.AiGenerateResponse callAiServerV2(String userMsg, ChatType chatType, String ragContext,
+            List<Map<String, String>> previousMessages) {
         AiChatDTO.AiGenerateRequest req = AiChatDTO.AiGenerateRequest.builder()
                 .user_msg(userMsg)
                 .chat_type(chatType.name())
                 .rag_context(ragContext)
+                .previous_messages(previousMessages)
                 .build();
 
         return aiWebClient.post()
@@ -384,5 +390,22 @@ public class BookAiChatService {
         if (!room.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.AI_CHAT_NOT_OWNER);
         }
+    }
+
+    /**
+     * 최근 대화 내역 조회 및 형식 변환 Helper
+     */
+    private List<Map<String, String>> getPreviousMessages(BookAiChatRoom room) {
+        List<BookAiChat> recentChats = chatRepository.findTop5ByChatRoomOrderByCreatedAtDesc(room);
+
+        // 최신순 -> 시간순 정렬
+        java.util.Collections.reverse(recentChats);
+
+        List<Map<String, String>> messages = new java.util.ArrayList<>();
+        for (BookAiChat chat : recentChats) {
+            messages.add(Map.of("role", "user", "content", chat.getUserMessage()));
+            messages.add(Map.of("role", "assistant", "content", chat.getAiMessage()));
+        }
+        return messages;
     }
 }

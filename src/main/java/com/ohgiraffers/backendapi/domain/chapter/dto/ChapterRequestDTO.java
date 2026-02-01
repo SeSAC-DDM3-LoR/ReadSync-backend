@@ -23,4 +23,7 @@ public class ChapterRequestDTO {
 
     @Schema(description = "챕터 JSON 파일")
     private MultipartFile file;
+
+    @Schema(description = "문단 개수 (파일 분석 결과)")
+    private Integer paragraphs;
 }

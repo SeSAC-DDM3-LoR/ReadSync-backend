@@ -23,7 +23,7 @@ import java.util.List;
  * AI 채팅 컨트롤러
  * 도서 뷰어에서 AI와 대화하기 위한 API를 제공합니다.
  */
-@Tag(name = "AI Chat (도서 AI 채팅)", description = "도서 내용 기반 AI 채팅 API")
+@Tag(name = "Chapter AI Chat (도서 AI 채팅)", description = "도서 내용 기반 AI 채팅 API")
 @RestController
 @RequestMapping("/v1/ai-chat")
 @RequiredArgsConstructor
