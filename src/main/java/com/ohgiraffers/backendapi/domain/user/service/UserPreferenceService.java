@@ -81,4 +81,42 @@ public class UserPreferenceService {
         }
         return newVec;
     }
+
+    // [신규] 진행률(30, 70, 100%) 도달 시 호출: 가중치 차등 적용
+    public void updatePreferenceByProgress(Long userId, Long chapterId, int milestone) {
+        // 1. 취향 벡터 로드
+        UserPreference pref = preferenceRepository.findByUser_Id(userId)
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+                    return preferenceRepository.save(new UserPreference(user));
+                });
+
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+        // 2. 해당 챕터의 임베딩 벡터 로드
+        ChapterVector chapterVector = chapterVectorRepository.findByChapter(chapter)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+
+        float[] chapterVec = chapterVector.getVector();
+
+        // 3. 마일스톤 별 가중치 조절
+        float multiplier = 1.0f;
+        if (milestone == 30)
+            multiplier = 0.5f; // 30%: 약한 반영
+        else if (milestone == 70)
+            multiplier = 1.0f; // 70%: 표준 반영
+        else if (milestone == 100)
+            multiplier = 1.5f;// 100%: 강한 반영
+
+        float weightLong = ALPHA_LONG * multiplier;
+        float weightShort = ALPHA_SHORT * multiplier;
+
+        // 4. 지수 이동 평균(EMA) 적용
+        float[] updatedLong = applyEma(pref.getVector(), chapterVec, weightLong);
+        float[] updatedShort = applyEma(pref.getShortTermVector(), chapterVec, weightShort);
+
+        // 5. 엔티티 반영
+        pref.updateTaste(updatedLong, updatedShort);
+    }
 }

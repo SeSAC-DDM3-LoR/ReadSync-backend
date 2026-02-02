@@ -97,4 +97,11 @@ public class Bookmark extends BaseTimeEntity {
 
         return sb.toString();
     }
+
+    public int getReadCount() {
+        if (this.readMask == null)
+            return 0;
+        String mask = new String(this.readMask, StandardCharsets.UTF_8);
+        return (int) mask.chars().filter(ch -> ch == '1').count();
+    }
 }

@@ -54,6 +54,13 @@ public class Library extends BaseTimeEntity {
     @Column(name = "last_read_chapter_id")
     private Long lastReadChapterId;
 
+    @Column(name = "last_vector_update_step")
+    private Integer lastVectorUpdateStep = 0; // 0, 30, 70, 100
+
+    @Transient
+    @Setter
+    private int reachedMilestone = 0; // 이번 업데이트에서 달성한 마일스톤 (일시적)
+
     public void incrementReadCount(int count) {
         if (this.totalReadParagraphs == null) {
             this.totalReadParagraphs = 0;
@@ -75,5 +82,9 @@ public class Library extends BaseTimeEntity {
 
     public void updateLastReadChapter(Long chapterId) {
         this.lastReadChapterId = chapterId;
+    }
+
+    public void updateVectorUpdateStep(int step) {
+        this.lastVectorUpdateStep = step;
     }
 }

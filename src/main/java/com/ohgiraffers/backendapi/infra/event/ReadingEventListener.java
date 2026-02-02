@@ -4,6 +4,7 @@ import com.ohgiraffers.backendapi.domain.bookmark.dto.BookmarkRequestDTO;
 import com.ohgiraffers.backendapi.domain.bookmark.service.BookmarkService;
 import com.ohgiraffers.backendapi.domain.booklog.dto.BookLogRequestDTO;
 import com.ohgiraffers.backendapi.domain.booklog.service.BookLogService;
+import com.ohgiraffers.backendapi.domain.library.entity.Library;
 import com.ohgiraffers.backendapi.domain.library.service.LibraryService;
 import com.ohgiraffers.backendapi.domain.user.service.UserPreferenceService;
 import lombok.RequiredArgsConstructor;
@@ -68,20 +69,17 @@ public class ReadingEventListener {
             log.info("└─────────────────────────────────────────────────────────────┘");
 
             if (result.newlyReadCount() > 0) {
-                // [4] 취향 벡터 업데이트
-                log.info("┌─[STEP 4] 취향 벡터 업데이트 ───────────────────────────────────┐");
-                userPreferenceService.updatePreferenceByIncrement(
-                        event.getUserId(),
-                        event.getChapterId(),
-                        result.newlyReadCount(),
-                        result.chapterParagraphs());
-                log.info("│ ✅ 업데이트 완료");
-                log.info("└─────────────────────────────────────────────────────────────┘");
-
-                // [5] 전체 진행률 동기화
-                log.info("┌─[STEP 5] 전체 진행률 동기화 ───────────────────────────────────┐");
-                libraryService.syncOverallProgress(event.getLibraryId(), result.newlyReadCount());
-                log.info("│ ✅ 동기화 완료");
+                // [5] 전체 진행률 동기화 및 마일스톤 체크
+                log.info("┌─[STEP 5] 전체 진행률 동기화 및 마일스톤 체크 ──────────────────────────┐");
+                Library library = libraryService.syncOverallProgress(event.getLibraryId(), result.newlyReadCount());
+                log.info("│ ✅ 동기화 완료: {}", library != null ? library.getTotalProgress() + "%" : "null");
+                
+                if (library != null && library.getReachedMilestone() > 0) {
+                    int milestone = library.getReachedMilestone();
+                    log.info("│ 🎉 마일스톤 달성! ({}%) → 취향 벡터 업데이트", milestone);
+                    userPreferenceService.updatePreferenceByProgress(event.getUserId(), event.getChapterId(), milestone);
+                    log.info("│ ✅ 벡터 업데이트 완료");
+                }
                 log.info("└─────────────────────────────────────────────────────────────┘");
             }
 
@@ -90,9 +88,9 @@ public class ReadingEventListener {
             log.info("══════════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
-            log.error("❌❌❌ 독서 이벤트 처리 중 오류 발생 ❌❌❌");
-            log.error("오류 메시지: {}", e.getMessage());
-            log.error("스택 트레이스:", e);
+     
+
+        log.error("스택 트레이스:", e);
         }
     }
 }
