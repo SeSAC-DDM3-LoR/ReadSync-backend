@@ -478,6 +478,7 @@ public class ChapterService {
                 .bookContentPath(s3Service.getPresignedUrl(chapter.getBookContentPath()))
                 .bookContent(content)
                 .paragraphs(chapter.getParagraphs())
+                .isEmbedded(chapter.getIsEmbedded())
                 .build();
     }
 
