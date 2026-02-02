@@ -37,7 +37,7 @@ public class ExpLogController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<Page<ExpLogResponseDTO>> getExpLogs(
             @PathVariable Long userId,
-            @PageableDefault(size = 15, sort = "logId", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 15, sort = "expLogId", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(expLogService.findAllByUser(userId, pageable));
     }
 
@@ -46,7 +46,7 @@ public class ExpLogController {
     @GetMapping("/me")
     public ResponseEntity<Page<ExpLogResponseDTO>> getMyExpLogs(
             @CurrentUserId Long userId,
-            @PageableDefault(size = 15, sort = "logId", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 15, sort = "expLogId", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(expLogService.findAllByUser(userId, pageable));
     }
 }

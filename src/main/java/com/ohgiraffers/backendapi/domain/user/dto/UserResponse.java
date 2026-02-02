@@ -64,6 +64,7 @@ public class UserResponse {
         private String profileImage;
         private String role;
         private String status;
+        private Long levelId;
         private int experience;
         private String preferredGenre;
         private String providerId;
@@ -78,6 +79,7 @@ public class UserResponse {
                     .profileImage(user.getUserInformation().getProfileImage())
                     .role(user.getRole().getKey())
                     .status(user.getStatus().name())
+                    .levelId(user.getUserInformation().getLevelId())
                     .experience(user.getUserInformation().getExperience())
                     .preferredGenre(user.getUserInformation().getPreferredGenre())
                     .build();
@@ -98,6 +100,8 @@ public class UserResponse {
         private String status; // ACTIVE, BANNED, WITHDRAWN
         private String provider; // kakao, google, naver
         private String preferredGenre;
+        private Long levelId;
+        private int experience;
     }
 
     // 타인 조회 (검색 등)
