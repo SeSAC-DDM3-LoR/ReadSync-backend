@@ -287,20 +287,17 @@ public class ChapterService {
         return convertToResponseDTO(chapterRepository.save(chapter), false);
     }
 
-    /* [4] 챕터 삭제 */
+    /* [4] 챕터 삭제 (Soft Delete) */
     @Transactional
     public void deleteChapter(Long chapterId) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
 
-        // 1. 로컬 파일 삭제 (경로가 로컬 경로일 때만 동작하도록 되어 있음)
-        deleteLocalFile(chapter.getBookContentPath());
+        // Soft Delete: deleted_at 기록
+        chapter.delete();
 
-        // 2. S3 파일 삭제 시도 (경로가 S3 URL일 때 동작)
-        s3Service.deleteFile(chapter.getBookContentPath());
-
-        // 3. DB 데이터 삭제
-        chapterRepository.delete(chapter);
+        // 참고: 파일(S3/Local)은 유지하여 데이터 복구 가능성 확보
+        // 필요 시 별도 스케줄러로 오래된 삭제 데이터의 파일을 정리하는 로직 권장
     }
 
     /* [5] [관리자] 모든 챕터 조회 */
