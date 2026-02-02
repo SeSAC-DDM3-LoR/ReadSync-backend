@@ -295,7 +295,7 @@ public class BookVectorService {
                 .bodyValue(Map.of("paths", paths))
                 .retrieve()
                 .bodyToMono(BatchVectorResponseDTO.class)
-                .timeout(Duration.ofMinutes(5))
+                .timeout(Duration.ofMinutes(30))
                 .block();
 
         if (response == null || response.getChapterVectors().isEmpty()) {

@@ -54,6 +54,7 @@ public class Library extends BaseTimeEntity {
     @Column(name = "last_read_chapter_id")
     private Long lastReadChapterId;
 
+    @Builder.Default
     @Column(name = "last_vector_update_step")
     private Integer lastVectorUpdateStep = 0; // 0, 30, 70, 100
 
