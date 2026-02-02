@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface RagParentRepository extends JpaRepository<RagParentDocument, Long> {
     List<RagParentDocument> findByChapterId(Long chapterId);
+
+    long countByChapterId(Long chapterId);
 }

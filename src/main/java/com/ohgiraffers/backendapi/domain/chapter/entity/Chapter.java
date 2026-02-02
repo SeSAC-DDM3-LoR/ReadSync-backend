@@ -4,6 +4,7 @@ import com.ohgiraffers.backendapi.domain.book.entity.Book;
 import com.ohgiraffers.backendapi.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Getter
@@ -11,6 +12,7 @@ import lombok.*;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @Table(name = "chapters")
+@SQLRestriction("deleted_at IS NULL")
 public class Chapter extends BaseTimeEntity {
     @Id
     @Column(name = "chapter_id")

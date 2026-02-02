@@ -259,4 +259,20 @@ public class ChapterVectorRagService {
         }
         return response.get("embedding");
     }
+
+    @Transactional(readOnly = true)
+    public com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagStatusResponseDTO getRagStatus(Long chapterId) {
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+
+        long parentCount = ragParentRepository.countByChapterId(chapterId);
+        long childCount = ragChildRepository.countByParent_ChapterId(chapterId);
+
+        return com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagStatusResponseDTO.builder()
+                .chapterId(chapterId)
+                .parentDocumentCount(parentCount)
+                .childVectorCount(childCount)
+                .isEmbedded(chapter.getIsEmbedded())
+                .build();
+    }
 }
