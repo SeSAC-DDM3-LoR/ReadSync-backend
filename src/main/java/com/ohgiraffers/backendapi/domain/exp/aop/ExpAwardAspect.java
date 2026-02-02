@@ -6,35 +6,55 @@ import com.ohgiraffers.backendapi.domain.exp.enums.ActivityType;
 import com.ohgiraffers.backendapi.domain.exp.service.ExpLogService;
 import com.ohgiraffers.backendapi.domain.library.entity.Library;
 import com.ohgiraffers.backendapi.domain.library.enums.ReadingStatus;
+import com.ohgiraffers.backendapi.domain.readingroom.entity.ReadingRoom;
+import com.ohgiraffers.backendapi.domain.readingroom.entity.RoomParticipant;
 import com.ohgiraffers.backendapi.domain.review.entity.Review;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+
 @Aspect
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class ExpAwardAspect {
 
     private final ExpLogService expLogService;
-    private Logger log;
 
     @AfterReturning(pointcut = "@annotation(awardExp)", returning = "result")
     public void processExp(AwardExp awardExp, Object result) {
-        // 1. 결과가 없으면(void 메서드 등) 아무것도 안 함
+        // 1. 결과가 없으면 아무것도 안 함
         if (result == null) return;
 
+        // 2. 결과가 컬렉션(List, Set 등)인 경우 처리
+        if (result instanceof Collection<?> collection) {
+            collection.forEach(item -> processSingleReward(awardExp.type(), item));
+        }
+        // 3. 단일 객체인 경우 처리
+        else {
+            processSingleReward(awardExp.type(), result);
+        }
+    }
+
+    /**
+     * 개별 객체에 대해 경험치 매핑 및 지급을 처리하는 공통 로직
+     */
+    private void processSingleReward(ActivityType type, Object target) {
         try {
-            // 2. 여기서만 경험치 로직 수행 (다른 팀원 코드에 영향 X)
-            ExpLogRequestDTO requestDTO = mapToRequest(awardExp.type(), result);
+            // 매핑 로직 수행
+            ExpLogRequestDTO requestDTO = mapToRequest(type, target);
+
             if (requestDTO != null) {
                 expLogService.giveExperience(requestDTO);
             }
         } catch (Exception e) {
-            // 3. 경험치 로직에서 에러가 나도 '원래 비즈니스 로직'은 성공해야 하므로 로그만 남김
-            log.error("경험치 지급 중 오류 발생: {}", e.getMessage());
+            // 경험치 로직 에러가 원래 비즈니스 로직에 영향을 주지 않도록 예외 처리
+            log.error("경험치 지급 중 오류 발생 (대상: {}): {}", target.getClass().getSimpleName(), e.getMessage());
         }
     }
 
@@ -65,6 +85,19 @@ public class ExpAwardAspect {
                     .referenceId(library.getBook().getBookId())
                     .categoryId(library.getBook().getCategory() != null ?
                             library.getBook().getCategory().getCategoryId() : null)
+                    .build();
+        }
+
+        if (result instanceof RoomParticipant participant) {
+            ReadingRoom room = participant.getReadingRoom();
+
+            return ExpLogRequestDTO.builder()
+                    .userId(participant.getUser().getId())
+                    .activityType(ActivityType.HEARD_TTS)
+                    .categoryId(room.getLibrary().getBook().getCategory()!= null ?
+                            room.getLibrary().getBook().getCategory().getCategoryId() : null)
+                    .targetId(room.getRoomId())
+                    .referenceId(room.getLibrary().getBook().getBookId())
                     .build();
         }
 

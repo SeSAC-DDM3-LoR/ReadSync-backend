@@ -35,4 +35,12 @@ public class ChapterVectorRagController {
             @org.springframework.web.bind.annotation.RequestParam String query) {
         return ResponseEntity.ok(chapterVectorRagService.searchRag(chapterId, query));
     }
+
+    @Operation(summary = "[관리자] RAG 임베딩 상태 조회", description = "챕터의 임베딩 상태(문서 수, 벡터 수)를 조회합니다.")
+    @org.springframework.web.bind.annotation.GetMapping("/{chapterId}/rag-status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.ohgiraffers.backendapi.domain.chapter.dto.rag.RagStatusResponseDTO> getRagStatus(
+            @PathVariable Long chapterId) {
+        return ResponseEntity.ok(chapterVectorRagService.getRagStatus(chapterId));
+    }
 }

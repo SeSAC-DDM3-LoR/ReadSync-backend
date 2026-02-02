@@ -1,5 +1,7 @@
 package com.ohgiraffers.backendapi.domain.book.service;
 
+import com.ohgiraffers.backendapi.domain.book.dto.BatchVectorResponseDTO;
+import com.ohgiraffers.backendapi.domain.book.dto.BookRecommendationDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookResponseDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookVectorDTO;
 import com.ohgiraffers.backendapi.domain.book.entity.Book;
@@ -11,12 +13,18 @@ import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVector;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterVectorRepository;
 import com.ohgiraffers.backendapi.domain.chapter.service.ChapterVectorService;
+import com.ohgiraffers.backendapi.domain.user.entity.UserPreference;
+import com.ohgiraffers.backendapi.domain.user.repository.UserPreferenceRepository;
+import com.ohgiraffers.backendapi.domain.user.service.UserPreferenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,12 +39,15 @@ public class BookVectorService {
     private final BookRepository bookRepository;
     private final ChapterRepository chapterRepository;
     private final ChapterVectorRepository chapterVectorRepository;
+    private final WebClient embeddingServerWebClient;
+    private final ChapterVectorService chapterVectorService;
+    private final UserPreferenceRepository userPreferenceRepository;
 
     /**
      * 특정 도서 ID를 기준으로 유사한 도서를 추천합니다.
      */
     @Transactional(readOnly = true)
-    public Page<BookVectorDTO> getRecommendationsByBookId(Long bookId, Pageable pageable) {
+    public Page<BookRecommendationDTO> getRecommendationsByBookId(Long bookId, Pageable pageable) {
         BookVector targetVector = bookVectorRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("해당 도서의 벡터 데이터가 존재하지 않습니다."));
 
@@ -47,20 +58,24 @@ public class BookVectorService {
     }
 
     /**
-     * [공통] 사용자 취향 벡터 기반 도서 추천
+     * [공통] 사용자 장기 취향 벡터 기반 도서 추천
      */
     @Transactional(readOnly = true)
-    public Page<BookVectorDTO> getRecommendationsByVector(String vector, Pageable pageable) {
+    public Page<BookRecommendationDTO> getRecommendationsByVector(Long userId, Pageable pageable) {
+        UserPreference userPreference = userPreferenceRepository.findById(userId).orElseThrow();
+        String vectorString = Arrays.toString(userPreference.getVector());
         // 취향 기반 검색이므로 제외할 ID 없음 (null)
-        return getRecommendations(vector, null, pageable);
+        return getRecommendations(vectorString, null, pageable);
     }
 
     /**
      * 내부 공통 추천 로직 (Page 변환 처리)
      */
-    private Page<BookVectorDTO> getRecommendations(String vectorString, Long excludeId, Pageable pageable) {
+    private Page<BookRecommendationDTO> getRecommendations(String vectorString, Long excludeId, Pageable pageable) {
         // 1. 유사도 기반으로 도서 ID와 Score 리스트를 먼저 가져옴 (1번의 쿼리)
         Page<Object[]> results = bookVectorRepository.findSimilarBookIds(vectorString, excludeId, pageable);
+//        Page<Object[]> results = chapterVectorRepository.findSimilarBookIdsByChapters(vectorString, excludeId, pageable);
+
 
         // 2. 검색된 ID들만 리스트로 추출
         List<Long> bookIds = results.getContent().stream()
@@ -81,8 +96,33 @@ public class BookVectorService {
             if (book == null) throw new RuntimeException("도서 정보를 찾을 수 없습니다. ID: " + id);
 
             // Score를 DTO에 함께 담아주면 프론트엔드에서 "유사도 98%" 같은 표시가 가능해집니다.
-            return BookVectorDTO.from(book);
+            return BookRecommendationDTO.from(book, score);
         });
+    }
+
+    private float[] getEmbeddingFromPython(String text) {
+        return embeddingServerWebClient.post()
+                .uri("/api/v1/embed-text")
+                .bodyValue(Map.of("text", text))
+                .retrieve()
+                .bodyToMono(BookVectorDTO.class)
+                .map(BookVectorDTO::getEmbedding)
+                .timeout(Duration.ofMinutes(4)) // API 외부 호출 고려하여 넉넉히 설정
+                .block();
+    }
+    /**
+     * [추가] 사용자가 입력한 텍스트로 유사 도서를 추천합니다.
+     */
+    @Transactional(readOnly = true)
+    public Page<BookRecommendationDTO> getRecommendationsByText(String text, Pageable pageable) {
+        // 1. 파이썬 서버 호출 -> 허깅페이스 임베딩 획득
+        float[] vector = getEmbeddingFromPython(text);
+
+        // 2. pgvector 검색을 위해 float[]을 "[0.1, 0.2, ...]" 형태의 문자열로 변환
+        String vectorString = Arrays.toString(vector);
+
+        // 3. 기존 검색 로직(findSimilarBookIds) 호출
+        return getRecommendations(vectorString, null, pageable);
     }
 
     /**
@@ -133,35 +173,28 @@ public class BookVectorService {
         int dim = vectors.get(0).length;
         float[] resultVector = new float[dim];
         double totalWeight = 0;
-        float threshold = 0.01f; // 이 값보다 작은 차원값은 노이즈로 간주
+        float threshold = 0.001f;
 
         for (int i = 0; i < vectors.size(); i++) {
             float[] v = vectors.get(i);
-            // 가중치: 텍스트 길이 (로그를 씌워 너무 극단적인 차이를 방지하거나, 그냥 길이를 사용)
             double weight = Math.log1p(paragraphCounts.get(i));
             totalWeight += weight;
 
             for (int j = 0; j < dim; j++) {
-                // 핵심: 절대값이 임계치를 넘는 '의미 있는 값'만 가중치 적용하여 합산
                 if (Math.abs(v[j]) > threshold) {
                     resultVector[j] += (float) (v[j] * weight);
                 }
             }
         }
-
-        // 최종 정규화 (Vector Normalization)
         return normalize(resultVector);
     }
 
     private float[] normalize(float[] vector) {
         double sumSq = 0;
         for (float v : vector) sumSq += v * v;
-
         float norm = (float) Math.sqrt(sumSq);
         if (norm > 0) {
-            for (int i = 0; i < vector.length; i++) {
-                vector[i] /= norm;
-            }
+            for (int i = 0; i < vector.length; i++) vector[i] /= norm;
         }
         return vector;
     }
@@ -192,4 +225,53 @@ public class BookVectorService {
 //        }
 //        return vector;
 //    }
+
+    @Transactional
+    @Async
+    public void processFullBookEmbedding(Long bookId) {
+        // 1. 데이터 준비
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new RuntimeException("도서가 존재하지 않습니다."));
+        List<Chapter> chapters = chapterRepository.findAllByBook_BookId(bookId);
+        if (chapters.isEmpty()) throw new RuntimeException("처리할 챕터가 없습니다.");
+
+        // 2. 파이썬 배치 호출 (경로 리스트 전달)
+        List<String> paths = chapters.stream().map(Chapter::getBookContentPath).toList();
+        BatchVectorResponseDTO response = embeddingServerWebClient.post()
+                .uri("/api/v1/embed-batch")
+                .bodyValue(Map.of("paths", paths))
+                .retrieve()
+                .bodyToMono(BatchVectorResponseDTO.class)
+                .timeout(Duration.ofMinutes(5))
+                .block();
+
+        if (response == null || response.getChapterVectors().isEmpty()) {
+            throw new RuntimeException("임베딩 서버로부터 벡터를 받지 못했습니다.");
+        }
+
+        // 3. 챕터 벡터 저장 (Upsert)
+        List<float[]> chapterVectors = response.getChapterVectors();
+        for (int i = 0; i < chapters.size(); i++) {
+            chapterVectorService.saveOrUpdateChapterVector(chapters.get(i), chapterVectors.get(i));
+        }
+
+        // 4. [사용자님 로직 핵심] 최적화된 북 벡터 계산
+        // 파이썬이 준 단순 평균 대신, 사용자님의 가중치 산식을 사용합니다.
+        List<Integer> paragraphCounts = chapters.stream().map(Chapter::getParagraphs).toList();
+        float[] optimizedAveragedVector = calculateOptimizedBookVector(chapterVectors, paragraphCounts);
+
+        // 5. 북 벡터 저장 (Upsert)
+        saveOrUpdateBookVector(book, optimizedAveragedVector);
+
+    }
+
+    private void saveOrUpdateBookVector(Book book, float[] vector) {
+        BookVector bookVector = bookVectorRepository.findById(book.getBookId())
+                .map(existing -> {
+                    existing.updateVector(vector);
+                    return existing;
+                })
+                .orElseGet(() -> BookVector.builder().book(book).vector(vector).build());
+        bookVectorRepository.save(bookVector);
+    }
 }

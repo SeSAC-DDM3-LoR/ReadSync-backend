@@ -1,7 +1,9 @@
 package com.ohgiraffers.backendapi.domain.book.controller;
 
+import com.ohgiraffers.backendapi.domain.book.dto.BookRecommendationDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookVectorDTO;
 import com.ohgiraffers.backendapi.domain.book.service.BookVectorService;
+import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,22 +35,45 @@ public class BookVectorController {
     @Operation(summary = "[공통] 유사 도서 추천 (페이징)", description = "특정 도서와 벡터 유사도가 높은 추천 도서 목록을 페이징하여 가져옵니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/recommend/{bookId}")
-    public ResponseEntity<Page<BookVectorDTO>> getSimilarBooks(
+    public ResponseEntity<Page<BookRecommendationDTO>> getSimilarBooks(
             @Parameter(description = "기준 도서 고유 번호") @PathVariable Long bookId,
-            @PageableDefault(size = 5) Pageable pageable) {
+            @Parameter(hidden = true) @PageableDefault(size = 5) Pageable pageable) {
 
-        Page<BookVectorDTO> recommendations = bookVectorService.getRecommendationsByBookId(bookId, pageable);
+        Page<BookRecommendationDTO> recommendations = bookVectorService.getRecommendationsByBookId(bookId, pageable);
         return ResponseEntity.ok(recommendations);
     }
 
     @Operation(summary = "[공통] 취향 벡터 기반 추천 (페이징)", description = "사용자의 취향 벡터를 입력받아 유사한 도서 목록을 검색합니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/search")
-    public ResponseEntity<Page<BookVectorDTO>> searchByVector(
-            @Parameter(description = "[0.1, 0.2, ...] 형태의 벡터 문자열") @RequestParam String vector,
-            @PageableDefault(size = 5) Pageable pageable) {
+    public ResponseEntity<Page<BookRecommendationDTO>> searchByVector(
+            @CurrentUserId Long userId,
+            @Parameter(hidden = true) @PageableDefault(size = 5) Pageable pageable) {
 
-        Page<BookVectorDTO> results = bookVectorService.getRecommendationsByVector(vector, pageable);
+        Page<BookRecommendationDTO> results = bookVectorService.getRecommendationsByVector(userId, pageable);
         return ResponseEntity.ok(results);
+    }
+
+    @Operation(summary = "[공통] 자유 텍스트 기반 추천", description = "입력한 문장과 가장 유사한 주제의 도서를 추천합니다.")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/search-text")
+    public ResponseEntity<Page<BookRecommendationDTO>> searchByText(
+            @RequestParam String text,
+            @Parameter(hidden = true) @PageableDefault(size = 5) Pageable pageable) {
+
+        return ResponseEntity.ok(bookVectorService.getRecommendationsByText(text, pageable));
+    }
+
+    /**
+     * 특정 도서의 모든 챕터를 임베딩하고 최적화된 북 벡터 생성
+     */
+    @Operation(summary = "[관리자] 도서 벡터 일괄 생성/갱신", description = "특정 도서의 모든 챕터 링크를 파이썬으로 보내 임베딩하고, 최적화된 알고리즘으로 북 벡터를 생성합니다.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/process/{bookId}")
+    public ResponseEntity<String> processBookEmbedding(
+            @Parameter(description = "벡터화할 도서 고유 번호") @PathVariable Long bookId) {
+
+        bookVectorService.processFullBookEmbedding(bookId);
+        return ResponseEntity.ok("성공적으로 도서 ID " + bookId + "의 벡터 처리를 완료했습니다.");
     }
 }

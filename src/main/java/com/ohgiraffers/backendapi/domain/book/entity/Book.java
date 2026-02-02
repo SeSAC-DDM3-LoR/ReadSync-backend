@@ -62,6 +62,10 @@ public class Book extends BaseTimeEntity {
     @Column(nullable = false)
     private String language;
 
+    // 문단 개수 필드 (-1은 미설정 상태를 의미)
+    @Column(name = "total_paragraphs")
+    private Integer totalParagraphs;
+
 
     public void update(Category category, BookRequestDTO request) {
         this.category = category;
@@ -75,5 +79,10 @@ public class Book extends BaseTimeEntity {
         this.viewPermission = request.getViewPermission();
         this.price = request.getPrice();
         this.language = request.getLanguage();
+    }
+
+    public void adjustTotalParagraphs(Integer delta) {
+        if (this.totalParagraphs == null) this.totalParagraphs = 0;
+        this.totalParagraphs += delta;
     }
 }
