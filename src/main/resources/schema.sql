@@ -86,6 +86,8 @@ CREATE TABLE "libraries" (
     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
     "expires_at" TIMESTAMP NULL,
     "reading_status" VARCHAR(20) NOT NULL,
+    "last_read_chapter_id" BIGINT NULL ,
+    "total_read_paragraphs" INT NULL,
     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
     CONSTRAINT "PK_LIBRARIES" PRIMARY KEY ("library_id")
 );
@@ -117,6 +119,7 @@ CREATE TABLE "books" (
     "view_permission" VARCHAR(20) DEFAULT 'FREE' NOT NULL,
     "price" DECIMAL(10,0) DEFAULT 0 NOT NULL,
     "language" VARCHAR(100) NOT NULL,
+    "total_paragraphs" INT NULL,
     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
     CONSTRAINT "PK_BOOKS" PRIMARY KEY ("book_id")

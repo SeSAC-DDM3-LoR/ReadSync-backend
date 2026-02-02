@@ -71,7 +71,13 @@ public class Chapter extends BaseTimeEntity {
 
     // 문단 개수 업데이트 메서드
     public void updateParagraphs(Integer paragraphs) {
-        if (paragraphs != null)
-            this.paragraphs = paragraphs;
+        if (paragraphs != null){
+            if (this.paragraphs != -1)
+                book.adjustTotalParagraphs(-this.paragraphs);
+            if (paragraphs >= 0){
+                this.paragraphs = paragraphs;
+                book.adjustTotalParagraphs(paragraphs);
+            }
+        }
     }
 }

@@ -29,7 +29,7 @@ public class BookmarkController {
     @Operation(summary = "[공통] 북마크 생성 및 수정", description = "읽기 상태를 동기화하거나 새로운 북마크를 생성합니다.")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping
-    public ResponseEntity<Long> saveOrUpdate(@RequestBody BookmarkRequestDTO requestDTO) {
+    public ResponseEntity<BookmarkService.BookmarkUpdateResult> saveOrUpdate(@RequestBody BookmarkRequestDTO requestDTO) {
         return ResponseEntity.ok(bookmarkService.saveOrUpdate(requestDTO));
     }
 

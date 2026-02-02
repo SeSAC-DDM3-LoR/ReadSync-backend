@@ -22,6 +22,7 @@ public class LibraryResponseDTO {
     private ReadingStatus readingStatus;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
+    private Long lastReadChapterId; // 마지막으로 읽은 챕터 ID (읽기 이어가기용)
 
     public static LibraryResponseDTO from(Library lib) {
         return LibraryResponseDTO.builder()
@@ -35,6 +36,7 @@ public class LibraryResponseDTO {
                 .readingStatus(lib.getReadingStatus())
                 .expiresAt(lib.getExpiresAt())
                 .createdAt(lib.getCreatedAt())
+                .lastReadChapterId(lib.getLastReadChapterId())
                 .build();
     }
 }

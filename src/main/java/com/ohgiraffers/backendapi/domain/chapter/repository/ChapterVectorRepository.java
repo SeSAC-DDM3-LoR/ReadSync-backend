@@ -1,5 +1,6 @@
 package com.ohgiraffers.backendapi.domain.chapter.repository;
 
+import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
 import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVector;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ChapterVectorRepository extends JpaRepository<ChapterVector, Long> {
 
@@ -22,5 +24,20 @@ public interface ChapterVectorRepository extends JpaRepository<ChapterVector, Lo
             "JOIN cv.chapter c " +
             "WHERE c.book.bookId = :bookId")
     List<float[]> findAllVectorsByBookId(@Param("bookId") Long bookId);
-    // 만약 챕터 벡터 목록을 API로 노출할 경우를 대비한 페이징 메서드
+
+    Optional<ChapterVector> findByChapter(Chapter chapter);
+
+    @NativeQuery(value = "SELECT ch.book_id, MAX(1 - (cv.vector <=> cast(:vectorString as vector))) as max_score " +
+            "FROM chapter_vectors cv " +
+            "JOIN chapters ch ON cv.chapter_id = ch.chapter_id " +
+            "WHERE (:excludeId IS NULL OR ch.book_id != :excludeId) " +
+            "  AND cv.vector IS NOT NULL " + // 벡터가 null인 경우 제외
+            "GROUP BY ch.book_id " +
+            "HAVING MAX(1 - (cv.vector <=> cast(:vectorString as vector))) IS NOT NULL " + // NaN 필터링
+            "   AND MAX(1 - (cv.vector <=> cast(:vectorString as vector))) != 'NaN'::float8 " +
+            "ORDER BY max_score DESC")
+    Page<Object[]> findSimilarBookIdsByChapters(@Param("vectorString") String vectorString,
+                                                @Param("excludeId") Long excludeId,
+                                                Pageable pageable);
+
 }
