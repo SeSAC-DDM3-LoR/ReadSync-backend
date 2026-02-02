@@ -105,6 +105,22 @@ public class LibraryService {
         }
         library.updateOverallProgress(clampedProgress);
 
+        // 6. 마일스톤 체크 (30%, 70%, 100%) 및 중복 업데이트 방지
+        int currentMilestone = 0;
+        int lastStep = library.getLastVectorUpdateStep();
+
+        if (lastStep < 30 && clampedProgress >= 30)
+            currentMilestone = 30;
+        else if (lastStep < 70 && clampedProgress >= 70)
+            currentMilestone = 70;
+        else if (lastStep < 100 && clampedProgress >= 100)
+            currentMilestone = 100;
+
+        if (currentMilestone > 0) {
+            library.updateVectorUpdateStep(currentMilestone);
+            library.setReachedMilestone(currentMilestone);
+        }
+
         return library;
     }
 

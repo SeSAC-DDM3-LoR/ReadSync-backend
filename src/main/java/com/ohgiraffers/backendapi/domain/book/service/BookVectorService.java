@@ -74,8 +74,9 @@ public class BookVectorService {
     private Page<BookRecommendationDTO> getRecommendations(String vectorString, Long excludeId, Pageable pageable) {
         // 1. 유사도 기반으로 도서 ID와 Score 리스트를 먼저 가져옴 (1번의 쿼리)
         Page<Object[]> results = bookVectorRepository.findSimilarBookIds(vectorString, excludeId, pageable);
-//        Page<Object[]> results = chapterVectorRepository.findSimilarBookIdsByChapters(vectorString, excludeId, pageable);
-
+        // Page<Object[]> results =
+        // chapterVectorRepository.findSimilarBookIdsByChapters(vectorString, excludeId,
+        // pageable);
 
         // 2. 검색된 ID들만 리스트로 추출
         List<Long> bookIds = results.getContent().stream()
@@ -93,7 +94,8 @@ public class BookVectorService {
             Double score = ((Number) result[1]).doubleValue();
 
             Book book = bookMap.get(id);
-            if (book == null) throw new RuntimeException("도서 정보를 찾을 수 없습니다. ID: " + id);
+            if (book == null)
+                throw new RuntimeException("도서 정보를 찾을 수 없습니다. ID: " + id);
 
             // Score를 DTO에 함께 담아주면 프론트엔드에서 "유사도 98%" 같은 표시가 가능해집니다.
             return BookRecommendationDTO.from(book, score);
@@ -110,6 +112,7 @@ public class BookVectorService {
                 .timeout(Duration.ofMinutes(4)) // API 외부 호출 고려하여 넉넉히 설정
                 .block();
     }
+
     /**
      * [추가] 사용자가 입력한 텍스트로 유사 도서를 추천합니다.
      */
@@ -137,7 +140,7 @@ public class BookVectorService {
         }
         List<Integer> paragraphCounts = chapters.stream().map(Chapter::getParagraphs).toList();
 
-//        List<float[]> chapterVectors = getChapterVectorsForBook(bookId);
+        // List<float[]> chapterVectors = getChapterVectorsForBook(bookId);
         List<float[]> chapterVectors = chapterVectorRepository.findAllVectorsByBookId(bookId);
         if (chapterVectors.isEmpty()) {
             throw new RuntimeException("임베딩된 챕터가 없어 북 벡터를 생성할 수 없습니다.");
@@ -171,60 +174,109 @@ public class BookVectorService {
 
     private float[] calculateOptimizedBookVector(List<float[]> vectors, List<Integer> paragraphCounts) {
         int dim = vectors.get(0).length;
+        int n = vectors.size();
         float[] resultVector = new float[dim];
-        double totalWeight = 0;
-        float threshold = 0.001f;
 
-        for (int i = 0; i < vectors.size(); i++) {
-            float[] v = vectors.get(i);
-            double weight = Math.log1p(paragraphCounts.get(i));
-            totalWeight += weight;
-
-            for (int j = 0; j < dim; j++) {
-                if (Math.abs(v[j]) > threshold) {
-                    resultVector[j] += (float) (v[j] * weight);
-                }
-            }
+        // 1. 챕터별 기본 가중치 (문단 수 기반 - SQRT 사용으로 영향력 강화)
+        double[] lengthWeights = new double[n];
+        for (int i = 0; i < n; i++) {
+            // Log 대신 Sqrt를 사용하여 긴 챕터의 중요도를 더 높임
+            lengthWeights[i] = Math.sqrt(paragraphCounts.get(i));
         }
+
+        // 2. 유사도 중심성(Centrality) 계산 (챕터가 2개 이상일 때만 의미 있음)
+        double[] centralityWeights = new double[n];
+        if (n > 1) {
+            for (int i = 0; i < n; i++) {
+                double similaritySum = 0;
+                for (int j = 0; j < n; j++) {
+                    if (i == j)
+                        continue;
+                    // 코사인 유사도 계산 (0~1 범위로 가정, 음수일 경우 0 처리)
+                    double sim = calculateCosineSimilarity(vectors.get(i), vectors.get(j));
+                    similaritySum += Math.max(0, sim);
+                }
+                // 평균 유사도를 중심성 점수로 사용
+                centralityWeights[i] = similaritySum / (n - 1);
+            }
+        } else {
+            centralityWeights[0] = 1.0;
+        }
+
+        // 3. 최종 가중치 적용 및 벡터 합산
+        double totalWeightCheck = 0;
+
+        for (int i = 0; i < n; i++) {
+            // 최종 가중치 = (문단 수 가중치) * (1 + 중심성 가중치)
+            // 중심성이 0일 수도 있으므로 1을 더해 기본값을 보장하거나, 곱하기 방식으로 조절
+            double finalWeight = lengthWeights[i] * (0.5 + centralityWeights[i]);
+            // 0.5를 더하는 이유: 중심성이 낮아도 문단 수가 많으면 어느 정도 반영하기 위함
+
+            float[] v = vectors.get(i);
+            for (int j = 0; j < dim; j++) {
+                resultVector[j] += (float) (v[j] * finalWeight);
+            }
+            totalWeightCheck += finalWeight;
+        }
+
+        // 4. 정규화 (방향만 중요하므로 L2 Norm 적용)
         return normalize(resultVector);
+    }
+
+    // 코사인 유사도 계산 헬퍼
+    private double calculateCosineSimilarity(float[] v1, float[] v2) {
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        for (int i = 0; i < v1.length; i++) {
+            dotProduct += v1[i] * v2[i];
+            normA += v1[i] * v1[i];
+            normB += v2[i] * v2[i];
+        }
+        if (normA == 0 || normB == 0)
+            return 0.0;
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     private float[] normalize(float[] vector) {
         double sumSq = 0;
-        for (float v : vector) sumSq += v * v;
+        for (float v : vector)
+            sumSq += v * v;
         float norm = (float) Math.sqrt(sumSq);
         if (norm > 0) {
-            for (int i = 0; i < vector.length; i++) vector[i] /= norm;
+            for (int i = 0; i < vector.length; i++)
+                vector[i] /= norm;
         }
         return vector;
     }
 
-//    @Transactional(readOnly = true)
-//    public List<float[]> getChapterVectorsForBook(Long bookId) {
-//        // 1. DB에서 문자열 형태로 가져오기
-//        List<String> vectorStrings = chapterVectorRepository.findAllVectorsByBookId(bookId);
-//
-//        if (vectorStrings == null || vectorStrings.isEmpty()) {
-//            return Collections.emptyList();
-//        }
-//
-//        // 2. 문자열을 float 배열로 수동 파싱
-//        return vectorStrings.stream()
-//                .map(this::parseVectorString)
-//                .collect(Collectors.toList());
-//    }
-//
-//    private float[] parseVectorString(String vectorStr) {
-//        // PostgreSQL vector 포맷인 "[0.1,0.2,...]"에서 대괄호 제거 후 쉼표로 분리
-//        String cleanStr = vectorStr.replace("[", "").replace("]", "");
-//        String[] parts = cleanStr.split(",");
-//
-//        float[] vector = new float[parts.length];
-//        for (int i = 0; i < parts.length; i++) {
-//            vector[i] = Float.parseFloat(parts[i].trim());
-//        }
-//        return vector;
-//    }
+    // @Transactional(readOnly = true)
+    // public List<float[]> getChapterVectorsForBook(Long bookId) {
+    // // 1. DB에서 문자열 형태로 가져오기
+    // List<String> vectorStrings =
+    // chapterVectorRepository.findAllVectorsByBookId(bookId);
+    //
+    // if (vectorStrings == null || vectorStrings.isEmpty()) {
+    // return Collections.emptyList();
+    // }
+    //
+    // // 2. 문자열을 float 배열로 수동 파싱
+    // return vectorStrings.stream()
+    // .map(this::parseVectorString)
+    // .collect(Collectors.toList());
+    // }
+    //
+    // private float[] parseVectorString(String vectorStr) {
+    // // PostgreSQL vector 포맷인 "[0.1,0.2,...]"에서 대괄호 제거 후 쉼표로 분리
+    // String cleanStr = vectorStr.replace("[", "").replace("]", "");
+    // String[] parts = cleanStr.split(",");
+    //
+    // float[] vector = new float[parts.length];
+    // for (int i = 0; i < parts.length; i++) {
+    // vector[i] = Float.parseFloat(parts[i].trim());
+    // }
+    // return vector;
+    // }
 
     @Transactional
     @Async
@@ -233,7 +285,8 @@ public class BookVectorService {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("도서가 존재하지 않습니다."));
         List<Chapter> chapters = chapterRepository.findAllByBook_BookId(bookId);
-        if (chapters.isEmpty()) throw new RuntimeException("처리할 챕터가 없습니다.");
+        if (chapters.isEmpty())
+            throw new RuntimeException("처리할 챕터가 없습니다.");
 
         // 2. 파이썬 배치 호출 (경로 리스트 전달)
         List<String> paths = chapters.stream().map(Chapter::getBookContentPath).toList();
@@ -242,7 +295,7 @@ public class BookVectorService {
                 .bodyValue(Map.of("paths", paths))
                 .retrieve()
                 .bodyToMono(BatchVectorResponseDTO.class)
-                .timeout(Duration.ofMinutes(5))
+                .timeout(Duration.ofMinutes(30))
                 .block();
 
         if (response == null || response.getChapterVectors().isEmpty()) {

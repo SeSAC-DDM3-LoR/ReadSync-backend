@@ -4,6 +4,7 @@ import com.ohgiraffers.backendapi.domain.book.entity.Book;
 import com.ohgiraffers.backendapi.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.SQLRestriction;
 
 @Entity
@@ -72,7 +73,7 @@ public class Chapter extends BaseTimeEntity {
     // 문단 개수 업데이트 메서드
     public void updateParagraphs(Integer paragraphs) {
         if (paragraphs != null){
-            if (this.paragraphs != -1)
+            if (!this.paragraphs.equals(-1))
                 book.adjustTotalParagraphs(-this.paragraphs);
             if (paragraphs >= 0){
                 this.paragraphs = paragraphs;

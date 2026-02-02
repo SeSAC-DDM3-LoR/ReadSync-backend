@@ -136,6 +136,10 @@ public class ChapterService {
 
         Chapter savedChapter = chapterRepository.save(chapter);
 
+        if (finalParagraphs > 0) {
+            book.adjustTotalParagraphs(finalParagraphs);
+        }
+
         return convertToResponseDTO(savedChapter, false);
     }
 
@@ -157,10 +161,6 @@ public class ChapterService {
                 : "Untitled Chapter";
         Integer finalParagraphs = requestDTO.getParagraphs() != null ? requestDTO.getParagraphs() : -1;
 
-        // 토탈 문단수를 위해 추가 -김정우-
-        if (finalParagraphs > 0) {
-            book.adjustTotalParagraphs(finalParagraphs);
-        }
 
 
         // 4. 엔티티 생성 및 저장
@@ -174,6 +174,10 @@ public class ChapterService {
 
         Chapter savedChapter = chapterRepository.save(chapter);
 
+        // 토탈 문단수를 위해 추가 -김정우-
+        if (finalParagraphs > 0) {
+            book.adjustTotalParagraphs(finalParagraphs);
+        }
         // 5. 응답 생성
         return convertToResponseDTO(savedChapter, false);
     }
@@ -259,10 +263,12 @@ public class ChapterService {
 
             // 파일이 변경되었고 paragraphs 정보가 있다면 업데이트
             if (requestDTO.getParagraphs() != null) {
+//                chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
                 chapter.updateParagraphs(requestDTO.getParagraphs());
             }
         } else if (requestDTO.getParagraphs() != null) {
             // 파일 변경 없어도 paragraphs 수동 수정 가능
+//            chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
             chapter.updateParagraphs(requestDTO.getParagraphs());
         }
 
@@ -287,6 +293,7 @@ public class ChapterService {
         chapter.updateMetadata(requestDTO.getChapterName(), requestDTO.getSequence());
 
         // 3. 문단 개수 수정
+//        chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
         chapter.updateParagraphs(requestDTO.getParagraphs());
 
         // 4. 변경사항 저장

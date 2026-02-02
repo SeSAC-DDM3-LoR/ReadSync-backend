@@ -52,6 +52,8 @@ public class UserService {
                 .status(user.getStatus().name()) // 상태 포함
                 .provider(user.getProvider().name())
                 .preferredGenre(userInfo.getPreferredGenre()) // 선호 장르 포함
+                .levelId(userInfo.getLevelId())
+                .experience(userInfo.getExperience())
                 .build();
     }
 
