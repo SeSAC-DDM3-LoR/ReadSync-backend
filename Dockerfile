@@ -1,10 +1,7 @@
-# 빌드 단계 생략, 실행 환경만 설정
 FROM amazoncorretto:21-alpine-jdk
-
 WORKDIR /app
-
-# GitHub Actions에서 복사해온 JAR 파일을 컨테이너로 복사
+# 빌드된 JAR 파일 하나만 복사 (파일명을 명시하는 것이 안전합니다)
 COPY *.jar app.jar
-
-# 실행
+# Beanstalk Docker 플랫폼은 기본적으로 8080 포트를 기대하는 경우가 많습니다.
+EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
