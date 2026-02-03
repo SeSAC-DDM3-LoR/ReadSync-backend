@@ -7,9 +7,9 @@ file:
 
 
 spring:
-#  sql:
-#    init:
-#      mode: never
+  sql:
+    init:
+      mode: never
 
   config:
     activate:

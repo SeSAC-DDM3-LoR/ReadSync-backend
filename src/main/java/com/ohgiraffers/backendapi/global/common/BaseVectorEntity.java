@@ -21,9 +21,9 @@ public class BaseVectorEntity extends BaseTimeEntity {
     @Id
     private Long id;
 
-    // Hibernate Vector 모듈이 'halfvec' <-> 'float[]' 자동 변환
+    // Hibernate Vector 모듈이 'vector' <-> 'float[]' 자동 변환
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Column(columnDefinition = "halfvec(1024)")
+    @Column(columnDefinition = "vector(1024)")
     private float[] vector;
 
     public void updateVector(float[] vector) {
