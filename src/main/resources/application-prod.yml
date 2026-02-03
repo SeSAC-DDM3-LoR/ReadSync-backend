@@ -64,3 +64,5 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+file:
+  upload-dir: /tmp/uploads/
