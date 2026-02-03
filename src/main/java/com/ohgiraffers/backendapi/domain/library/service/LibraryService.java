@@ -109,12 +109,13 @@ public class LibraryService {
         int currentMilestone = 0;
         int lastStep = library.getLastVectorUpdateStep();
 
-        if (lastStep < 30 && clampedProgress >= 30)
-            currentMilestone = 30;
+        // 높은 마일스톤부터 체크해야 급격한 진행률 상승 시에도 가장 중요한 단계를 포착함
+        if (lastStep < 100 && clampedProgress >= 100)
+            currentMilestone = 100;
         else if (lastStep < 70 && clampedProgress >= 70)
             currentMilestone = 70;
-        else if (lastStep < 100 && clampedProgress >= 100)
-            currentMilestone = 100;
+        else if (lastStep < 30 && clampedProgress >= 30)
+            currentMilestone = 30;
 
         if (currentMilestone > 0) {
             library.updateVectorUpdateStep(currentMilestone);

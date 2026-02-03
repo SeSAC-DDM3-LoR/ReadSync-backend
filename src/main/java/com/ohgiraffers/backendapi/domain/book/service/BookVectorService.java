@@ -16,6 +16,7 @@ import com.ohgiraffers.backendapi.domain.chapter.service.ChapterVectorService;
 import com.ohgiraffers.backendapi.domain.user.entity.UserPreference;
 import com.ohgiraffers.backendapi.domain.user.repository.UserPreferenceRepository;
 import com.ohgiraffers.backendapi.domain.user.service.UserPreferenceService;
+import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository; // 추가
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +43,7 @@ public class BookVectorService {
     private final WebClient embeddingServerWebClient;
     private final ChapterVectorService chapterVectorService;
     private final UserPreferenceRepository userPreferenceRepository;
+    private final LibraryRepository libraryRepository; // 추가
 
     /**
      * 특정 도서 ID를 기준으로 유사한 도서를 추천합니다.
@@ -54,7 +56,7 @@ public class BookVectorService {
         String vectorString = Arrays.toString(targetVector.getVector());
 
         // 자기 자신(bookId)을 제외하고 검색
-        return getRecommendations(vectorString, bookId, pageable);
+        return getRecommendations(vectorString, Collections.singletonList(bookId), pageable); // List로 변경
     }
 
     /**
@@ -64,19 +66,27 @@ public class BookVectorService {
     public Page<BookRecommendationDTO> getRecommendationsByVector(Long userId, Pageable pageable) {
         UserPreference userPreference = userPreferenceRepository.findById(userId).orElseThrow();
         String vectorString = Arrays.toString(userPreference.getVector());
-        // 취향 기반 검색이므로 제외할 ID 없음 (null)
-        return getRecommendations(vectorString, null, pageable);
+
+        // [수정] 사용자가 이미 소유한(라이브러리에 있는) 모든 도서 ID 가져오기
+        List<Long> excludeIds = libraryRepository.findBookIdsByUserId(userId);
+
+        return getRecommendations(vectorString, excludeIds, pageable);
     }
 
     /**
      * 내부 공통 추천 로직 (Page 변환 처리)
      */
-    private Page<BookRecommendationDTO> getRecommendations(String vectorString, Long excludeId, Pageable pageable) {
+    private Page<BookRecommendationDTO> getRecommendations(String vectorString, List<Long> excludeIds,
+            Pageable pageable) {
+        // [수정] excludeIds가 비어있으면 null 처리하여 쿼리 오류 방지
+        boolean hasExcludes = excludeIds != null && !excludeIds.isEmpty();
+        if (!hasExcludes) {
+            excludeIds = Collections.singletonList(-1L); // 빈 리스트일 경우 더미값
+        }
+
         // 1. 유사도 기반으로 도서 ID와 Score 리스트를 먼저 가져옴 (1번의 쿼리)
-        Page<Object[]> results = bookVectorRepository.findSimilarBookIds(vectorString, excludeId, pageable);
-        // Page<Object[]> results =
-        // chapterVectorRepository.findSimilarBookIdsByChapters(vectorString, excludeId,
-        // pageable);
+        Page<Object[]> results = bookVectorRepository.findSimilarBookIds(vectorString, excludeIds, hasExcludes,
+                pageable);
 
         // 2. 검색된 ID들만 리스트로 추출
         List<Long> bookIds = results.getContent().stream()
@@ -281,41 +291,84 @@ public class BookVectorService {
     @Transactional
     @Async
     public void processFullBookEmbedding(Long bookId) {
+        System.out.println(
+                "🚀 [Async Start] 도서 ID " + bookId + " 처리 시작 (Thread: " + Thread.currentThread().getName() + ")");
+
         // 1. 데이터 준비
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("도서가 존재하지 않습니다."));
+        // [수정] Book 엔티티는 콜백 내부에서 필요할 때 조회하므로 여기서는 ID만으로 충분합니다.
         List<Chapter> chapters = chapterRepository.findAllByBook_BookId(bookId);
         if (chapters.isEmpty())
             throw new RuntimeException("처리할 챕터가 없습니다.");
 
-        // 2. 파이썬 배치 호출 (경로 리스트 전달)
+        // 2. 파이썬 배치 호출을 위한 ID 및 경로 리스트 추출
+        // [중요] 비동기 콜백(subscribe) 내에서는 위에서 조회한 book, chapters 엔티티를 직접 사용하면 안 됨.
+        // 트랜잭션이 종료된 후 사용하게 되어 "detached entity passed to persist" 에러 발생함.
+        // 따라서 ID만 추출해두고, 콜백 내부에서 다시 조회해야 함.
         List<String> paths = chapters.stream().map(Chapter::getBookContentPath).toList();
-        BatchVectorResponseDTO response = embeddingServerWebClient.post()
+        List<Long> chapterIds = chapters.stream().map(Chapter::getChapterId).toList();
+
+        // [수정] block() 제거하고 subscribe()로 완전 비동기 처리
+        // 이렇게 하면 스레드가 대기하지 않고 즉시 반환되며, 파이썬 응답이 오면 콜백이 실행됩니다.
+        embeddingServerWebClient.post()
                 .uri("/api/v1/embed-batch")
                 .bodyValue(Map.of("paths", paths))
                 .retrieve()
                 .bodyToMono(BatchVectorResponseDTO.class)
                 .timeout(Duration.ofMinutes(30))
-                .block();
+                .subscribe(response -> {
+                    // 성공 시 콜백
+                    if (response == null || response.getChapterVectors().isEmpty()) {
+                        System.err.println("⚠️ 임베딩 서버 응답이 비어있습니다. Book ID: " + bookId);
+                        return;
+                    }
 
-        if (response == null || response.getChapterVectors().isEmpty()) {
-            throw new RuntimeException("임베딩 서버로부터 벡터를 받지 못했습니다.");
-        }
+                    try {
+                        // [중요] 비동기 스레드에서 엔티티를 다시 조회하여 영속 상태(Managed)로 만듦
+                        Book managedBook = bookRepository.findById(bookId).orElseThrow();
 
-        // 3. 챕터 벡터 저장 (Upsert)
-        List<float[]> chapterVectors = response.getChapterVectors();
-        for (int i = 0; i < chapters.size(); i++) {
-            chapterVectorService.saveOrUpdateChapterVector(chapters.get(i), chapterVectors.get(i));
-        }
+                        // 3. 챕터 벡터 저장 (Upsert)
+                        List<float[]> chapterVectors = response.getChapterVectors();
+                        List<Integer> validParagraphCounts = new java.util.ArrayList<>();
 
-        // 4. [사용자님 로직 핵심] 최적화된 북 벡터 계산
-        // 파이썬이 준 단순 평균 대신, 사용자님의 가중치 산식을 사용합니다.
-        List<Integer> paragraphCounts = chapters.stream().map(Chapter::getParagraphs).toList();
-        float[] optimizedAveragedVector = calculateOptimizedBookVector(chapterVectors, paragraphCounts);
+                        for (int i = 0; i < chapterIds.size(); i++) {
+                            if (i >= chapterVectors.size())
+                                break; // IndexOutOfBounds 방지
 
-        // 5. 북 벡터 저장 (Upsert)
-        saveOrUpdateBookVector(book, optimizedAveragedVector);
+                            Long cId = chapterIds.get(i);
+                            final int index = i; // 람다 캡처를 위한 effectively final 변수
 
+                            // [수정] 더 이상 여기서 엔티티를 조회하지 않고, ID만 넘겨서 트랜잭션 처리를 위임합니다.
+                            chapterVectorService.saveVectorForChapter(cId, chapterVectors.get(index));
+
+                            // 문단 수 정보는 일단 Fallback 계산을 위해 필요하다면 별도로 가져와야 하지만,
+                            // 현재 파이썬 응답을 전적으로 신뢰하므로 validParagraphCounts 수집 로직도 제거 가능합니다.
+                            // 다만, 혹시 모를 미래를 위해 Paragraphs 정보가 필요하다면 별도 쿼리가 필요할 수 있습니다.
+                            // 여기서는 일단 제거하고, 파이썬 응답 신뢰로 갑니다.
+                        }
+
+                        // 4. [수정] Python 서버에서 계산된 최적화된 북 벡터 사용 (Power Mean p=2.5)
+                        float[] optimizedAveragedVector;
+                        if (response.getBookVector() != null && response.getBookVector().length > 0) {
+                            optimizedAveragedVector = response.getBookVector();
+                        } else {
+                            // [Fallback]
+                            optimizedAveragedVector = calculateOptimizedBookVector(chapterVectors,
+                                    validParagraphCounts);
+                        }
+
+                        // 5. 북 벡터 저장
+                        saveOrUpdateBookVector(managedBook, optimizedAveragedVector);
+                        System.out.println("✅ 도서 벡터 갱신 완료: " + managedBook.getTitle());
+
+                    } catch (Exception e) {
+                        System.err.println("❌ 벡터 저장 중 오류 발생: " + e.getMessage());
+                        // e.printStackTrace();
+                    }
+
+                }, error -> {
+                    // 실패 시 콜백
+                    System.err.println("❌ 파이썬 서버 통신 오류 (Book ID " + bookId + "): " + error.getMessage());
+                });
     }
 
     private void saveOrUpdateBookVector(Book book, float[] vector) {

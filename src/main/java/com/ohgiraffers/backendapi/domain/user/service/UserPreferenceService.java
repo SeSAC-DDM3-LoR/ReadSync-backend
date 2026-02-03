@@ -83,6 +83,7 @@ public class UserPreferenceService {
     }
 
     // [신규] 진행률(30, 70, 100%) 도달 시 호출: 가중치 차등 적용
+    @Transactional
     public void updatePreferenceByProgress(Long userId, Long chapterId, int milestone) {
         // 1. 취향 벡터 로드
         UserPreference pref = preferenceRepository.findByUser_Id(userId)
