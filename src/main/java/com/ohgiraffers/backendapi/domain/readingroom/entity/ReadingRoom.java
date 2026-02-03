@@ -40,7 +40,7 @@ public class ReadingRoom extends BaseTimeEntity {
     @Column(name = "voice_type", nullable = false)
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private VoiceType voiceType = VoiceType.BASIC;
+    private VoiceType voiceType = VoiceType.SEONBI;
 
     @Column(name = "play_speed", nullable = false, precision = 3, scale = 1)
     @Builder.Default
@@ -56,14 +56,14 @@ public class ReadingRoom extends BaseTimeEntity {
     private RoomStatus status = RoomStatus.WAITING;
 
     // 왜 서재에서 안 받아오나!
-    // 방장이 가진 책 중 임의의 책을 선택해서 읽는 것 따라서 library를 통해 내 책을 가져오지만 현재 독서룸에는 chapter가 연관관계를 맺을 필요 없음
+    // 방장이 가진 책 중 임의의 책을 선택해서 읽는 것 따라서 library를 통해 내 책을 가져오지만 현재 독서룸에는 chapter가
+    // 연관관계를 맺을 필요 없음
     @Column(name = "current_chapter", nullable = false)
     private Integer currentChapterId;
 
     @Column(name = "last_read_pos", nullable = false)
     @Builder.Default
     private Integer lastReadPos = 0;
-
 
     // 상태 변경 메서드
     // 방 상태 변경

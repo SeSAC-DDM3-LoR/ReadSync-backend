@@ -16,6 +16,11 @@ public enum ChatType {
     // 예: "주인공이 왜 화를 낸 거야?", "이 복선은 나중에 어떻게 회수돼?"
     CONTENT_QA("책 내용 질문/심층 분석"),
 
+    // 2-1. 문맥 파악이 필요한 질문 (Context Q&A)
+    // 기술: Query Rewrite (History + Current Query) -> RAG
+    // 예: "그는 왜 그랬어?", "그게 무슨 말이야?" (대명사/지시어 포함)
+    CONTENT_QA_CONTEXT("문맥 파악 질문"),
+
     // 3. 요약 요청 (Summary) -> [REQ-REA-006]
     // 기술: 현재 챕터 전체 텍스트 주입 + 요약 프롬프트
     // 예: "지금 읽은 챕터 3줄 요약해줘", "작가의 의도가 뭐야?"
