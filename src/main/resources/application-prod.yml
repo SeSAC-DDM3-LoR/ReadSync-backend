@@ -1,3 +1,11 @@
+
+server:
+  port: 5000
+  
+file:
+  upload-dir: /tmp/uploads/
+
+
 spring:
   config:
     activate:
@@ -63,6 +71,6 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
+  access-token-validity: 3600000      # 예: 1시간 (밀리초 단위)
+  refresh-token-validity: 1209600000  # 예: 14일 (밀리초 단위)
 
-file:
-  upload-dir: /tmp/uploads/
