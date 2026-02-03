@@ -78,3 +78,4 @@ jwt:
   access-token-validity: 3600000      # 예: 1시간 (밀리초 단위)
   refresh-token-validity: 1209600000  # 예: 14일 (밀리초 단위)
 
+# 제발 이젠 서버 동작하게 해주세요 제발 
