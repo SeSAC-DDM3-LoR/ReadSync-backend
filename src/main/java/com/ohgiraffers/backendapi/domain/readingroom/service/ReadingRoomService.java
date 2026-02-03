@@ -101,8 +101,7 @@ public class ReadingRoomService {
             if (room.getStatus() == RoomStatus.PLAYING) {
                 // 초대장이 있고, 상태가 ACCEPTED(수락됨) 혹은 WAITING(대기중)인 경우 통과
                 boolean hasInvitation = roomInvitationRepository.existsByReadingRoomAndReceiverAndStatus(
-                        room, user, InvitationStatus.ACCEPTED
-                );
+                        room, user, InvitationStatus.ACCEPTED);
 
                 // 초대장도 없다면 에러 발생 (입장 불가)
                 if (!hasInvitation) {
@@ -183,7 +182,7 @@ public class ReadingRoomService {
             java.util.Map<String, Object> message = new java.util.HashMap<>();
             message.put("type", "PARTICIPANT_UPDATE");
             message.put("roomId", roomId);
-            messagingTemplate.convertAndSend("/topic/room/" + roomId, message);
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/status", message);
         } catch (Exception e) {
             // 로깅 등 에러 처리 (필요시)
             System.err.println("Failed to send participant update: " + e.getMessage());
@@ -290,7 +289,7 @@ public class ReadingRoomService {
             message.put("type", "STATUS_CHANGE");
             message.put("roomId", roomId);
             message.put("status", status);
-            messagingTemplate.convertAndSend("/topic/room/" + roomId, message);
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/status", message);
         } catch (Exception e) {
             System.err.println("Failed to send status update: " + e.getMessage());
         }

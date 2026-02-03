@@ -1,54 +1,57 @@
 -- pgvector 확장 설치 (필수)
 CREATE EXTENSION IF NOT EXISTS vector;
+-- [중요] RDS의 vector 확장을 최신 버전으로 업데이트 (0.8.0 호환성 확보)
+ALTER EXTENSION vector UPDATE;
 
--- 0. 기존 테이블 삭제 (초기화용)
-DROP TABLE IF EXISTS "notices" CASCADE;
-DROP TABLE IF EXISTS "content_reports" CASCADE;
-DROP TABLE IF EXISTS "libraries" CASCADE;
-DROP TABLE IF EXISTS "user_books" CASCADE;
-DROP TABLE IF EXISTS "bookmarks" CASCADE;
-DROP TABLE IF EXISTS "books" CASCADE;
-DROP TABLE IF EXISTS "likes" CASCADE;
-DROP TABLE IF EXISTS "credits" CASCADE;
-DROP TABLE IF EXISTS "inquiries" CASCADE;
-DROP TABLE IF EXISTS "friendships" CASCADE;
-DROP TABLE IF EXISTS "room_participants" CASCADE;
-DROP TABLE IF EXISTS "exp_logs" CASCADE;
-DROP TABLE IF EXISTS "reports" CASCADE;
-DROP TABLE IF EXISTS "levels" CASCADE;
-DROP TABLE IF EXISTS "carts" CASCADE;
-DROP TABLE IF EXISTS "book_ai_chats" CASCADE;
-DROP TABLE IF EXISTS "reviews" CASCADE;
-DROP TABLE IF EXISTS "comments" CASCADE;
-DROP TABLE IF EXISTS "reading_rooms" CASCADE;
-DROP TABLE IF EXISTS "order_items" CASCADE;
-DROP TABLE IF EXISTS "exp_rules" CASCADE;
-DROP TABLE IF EXISTS "get_exp_rules" CASCADE;
-DROP TABLE IF EXISTS "users" CASCADE;
-DROP TABLE IF EXISTS "subscriptions" CASCADE;
-DROP TABLE IF EXISTS "subscription_plans" CASCADE;
-DROP TABLE IF EXISTS "user_informations" CASCADE;
-DROP TABLE IF EXISTS "orders" CASCADE;
-DROP TABLE IF EXISTS "inquiry_answers" CASCADE;
-DROP TABLE IF EXISTS "community_posts" CASCADE;
-DROP TABLE IF EXISTS "categories" CASCADE;
-DROP TABLE IF EXISTS "book_logs" CASCADE;
-DROP TABLE IF EXISTS "chapters" CASCADE;
-DROP TABLE IF EXISTS "blacklists" CASCADE;
-DROP TABLE IF EXISTS "payment_history" CASCADE;
-DROP TABLE IF EXISTS "credit_type" CASCADE;
-DROP TABLE IF EXISTS "community_comments" CASCADE;
-DROP TABLE IF EXISTS "chat_logs" CASCADE;
-DROP TABLE IF EXISTS "book_ai_chat_rooms" CASCADE;
-DROP TABLE IF EXISTS "room_invitations" CASCADE;
-DROP TABLE IF EXISTS "payment_methods" CASCADE;
-DROP TABLE IF EXISTS "refresh_tokens" CASCADE;
-DROP TABLE IF EXISTS "user_vectors" CASCADE;
-DROP TABLE IF EXISTS "book_vectors" CASCADE;
-DROP TABLE IF EXISTS "chapter_vectors" CASCADE;
-DROP TABLE IF EXISTS "chapter_vectors_rag" CASCADE;
-DROP TABLE IF EXISTS "rag_child_vectors" CASCADE;
-DROP TABLE IF EXISTS "rag_parent_documents" CASCADE;
+-- 0. 기존 테이블 삭제 (초기화용) - ⚠️ 운영 환경 데이터 보호를 위해 주석 처리함
+-- (로컬 초기화가 필요할 때만 주석을 풀고 사용하세요)
+-- DROP TABLE IF EXISTS "notices" CASCADE;
+-- DROP TABLE IF EXISTS "content_reports" CASCADE;
+-- DROP TABLE IF EXISTS "libraries" CASCADE;
+-- DROP TABLE IF EXISTS "user_books" CASCADE;
+-- DROP TABLE IF EXISTS "bookmarks" CASCADE;
+-- DROP TABLE IF EXISTS "books" CASCADE;
+-- DROP TABLE IF EXISTS "likes" CASCADE;
+-- DROP TABLE IF EXISTS "credits" CASCADE;
+-- DROP TABLE IF EXISTS "inquiries" CASCADE;
+-- DROP TABLE IF EXISTS "friendships" CASCADE;
+-- DROP TABLE IF EXISTS "room_participants" CASCADE;
+-- DROP TABLE IF EXISTS "exp_logs" CASCADE;
+-- DROP TABLE IF EXISTS "reports" CASCADE;
+-- DROP TABLE IF EXISTS "levels" CASCADE;
+-- DROP TABLE IF EXISTS "carts" CASCADE;
+-- DROP TABLE IF EXISTS "book_ai_chats" CASCADE;
+-- DROP TABLE IF EXISTS "reviews" CASCADE;
+-- DROP TABLE IF EXISTS "comments" CASCADE;
+-- DROP TABLE IF EXISTS "reading_rooms" CASCADE;
+-- DROP TABLE IF EXISTS "order_items" CASCADE;
+-- DROP TABLE IF EXISTS "exp_rules" CASCADE;
+-- DROP TABLE IF EXISTS "get_exp_rules" CASCADE;
+-- DROP TABLE IF EXISTS "users" CASCADE;
+-- DROP TABLE IF EXISTS "subscriptions" CASCADE;
+-- DROP TABLE IF EXISTS "subscription_plans" CASCADE;
+-- DROP TABLE IF EXISTS "user_informations" CASCADE;
+-- DROP TABLE IF EXISTS "orders" CASCADE;
+-- DROP TABLE IF EXISTS "inquiry_answers" CASCADE;
+-- DROP TABLE IF EXISTS "community_posts" CASCADE;
+-- DROP TABLE IF EXISTS "categories" CASCADE;
+-- DROP TABLE IF EXISTS "book_logs" CASCADE;
+-- DROP TABLE IF EXISTS "chapters" CASCADE;
+-- DROP TABLE IF EXISTS "blacklists" CASCADE;
+-- DROP TABLE IF EXISTS "payment_history" CASCADE;
+-- DROP TABLE IF EXISTS "credit_type" CASCADE;
+-- DROP TABLE IF EXISTS "community_comments" CASCADE;
+-- DROP TABLE IF EXISTS "chat_logs" CASCADE;
+-- DROP TABLE IF EXISTS "book_ai_chat_rooms" CASCADE;
+-- DROP TABLE IF EXISTS "room_invitations" CASCADE;
+-- DROP TABLE IF EXISTS "payment_methods" CASCADE;
+-- DROP TABLE IF EXISTS "refresh_tokens" CASCADE;
+-- DROP TABLE IF EXISTS "user_vectors" CASCADE;
+-- DROP TABLE IF EXISTS "book_vectors" CASCADE;
+-- DROP TABLE IF EXISTS "chapter_vectors" CASCADE;
+-- DROP TABLE IF EXISTS "chapter_vectors_rag" CASCADE;
+-- DROP TABLE IF EXISTS "rag_child_vectors" CASCADE;
+-- DROP TABLE IF EXISTS "rag_parent_documents" CASCADE;
 
 -- 1. Notices
 CREATE TABLE "notices" (
@@ -137,7 +140,7 @@ CREATE TABLE "likes" (
 );
 
 -- 7. Credits
-DROP TABLE IF EXISTS "credits" CASCADE;
+-- DROP TABLE IF EXISTS "credits" CASCADE; -- 안전을 위해 주석 처리
 CREATE TABLE "credits" (
                            "credits_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
 
@@ -203,17 +206,6 @@ CREATE TABLE "exp_logs" (
 );
 
 -- 12. Reports
--- CREATE TABLE "reports" (
---     "report_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
---     "reporter_id" BIGINT NOT NULL,
---     "chat_id" BIGINT NOT NULL,
---     "reason" TEXT NOT NULL,
---     "status" VARCHAR(20) DEFAULT 'PENDING' NOT NULL,
---     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
---     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
---     CONSTRAINT "PK_REPORTS" PRIMARY KEY ("report_id")
--- );
-
 CREATE TABLE "reports" (
     "report_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "reporter_id" BIGINT NOT NULL,          -- 신고자
@@ -227,7 +219,7 @@ CREATE TABLE "reports" (
     CONSTRAINT "PK_REPORTS" PRIMARY KEY ("report_id")
 );
 
--- 13. s
+-- 13. Levels
 CREATE TABLE "levels" (
     "level_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "required_exp" INT NOT NULL,
@@ -356,7 +348,7 @@ CREATE TABLE "users" (
     CONSTRAINT "PK_USERS" PRIMARY KEY ("user_id")
 );
 
--- 22. Subscriptions (김선준 수정 - 260126)
+-- 22. Subscriptions
 -- 22-1. Subscription Plans
 CREATE TABLE "subscription_plans" (
     "plan_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -385,7 +377,7 @@ CREATE TABLE "subscriptions" (
     CONSTRAINT "PK_SUBSCRIPTIONS" PRIMARY KEY ("sub_id")
 );
 
--- 23. User Informations (태그 컬럼 추가됨)
+-- 23. User Informations
 CREATE TABLE "user_informations" (
                                      "user_information_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
                                      "preferred_genre" VARCHAR(255) NOT NULL,
@@ -396,7 +388,6 @@ CREATE TABLE "user_informations" (
                                      "user_name" VARCHAR(30) NOT NULL,
                                      "tag" VARCHAR(4) NOT NULL,
 
-    -- [추가됨] JPA BaseTimeEntity와 매핑될 컬럼들
                                      "created_at" TIMESTAMP DEFAULT now() NOT NULL,
                                      "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
                                      "deleted_at" TIMESTAMP NULL,
@@ -480,19 +471,6 @@ CREATE TABLE "chapters" (
 );
 
 -- 30. Blacklists
--- CREATE TABLE "blacklists" (
---     "blacklist_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
---     "user_id" BIGINT NOT NULL,
---     "type" VARCHAR(20) NOT NULL,
---     "reason" TEXT NULL,
---     "start_date" TIMESTAMP DEFAULT now() NOT NULL,
---     "end_date" TIMESTAMP NOT NULL,
---     "is_active" BOOLEAN DEFAULT TRUE NOT NULL,
---     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
---     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
---     CONSTRAINT "PK_BLACKLISTS" PRIMARY KEY ("blacklist_id")
--- );
-
 CREATE TABLE "blacklists" (
     "blacklist_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "user_id" BIGINT NOT NULL,
@@ -523,7 +501,7 @@ CREATE TABLE "payment_history" (
 );
 
 -- 32. Credit Type
-DROP TABLE IF EXISTS "credit_type" CASCADE;
+-- DROP TABLE IF EXISTS "credit_type" CASCADE; -- 안전을 위해 주석 처리
 CREATE TABLE "credit_type" (
                                "credit_type_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL, -- Entity: credit_type_id
                                "credit_name" VARCHAR(20) NOT NULL,
@@ -601,32 +579,31 @@ CREATE TABLE "refresh_tokens" (
     CONSTRAINT "PK_REFRESH_TOKENS" PRIMARY KEY ("user_id")
 );
 
--- 39. User Vectors
+-- 39. User Vectors (수정됨: VECTOR)
 CREATE TABLE "user_vectors" (
     "user_id" BIGINT NOT NULL,
-    "vector" HALFVEC(1024) NULL,
+    "vector" VECTOR(1024) NULL, -- [변경] HALFVEC -> VECTOR
     "created_at" TIMESTAMP DEFAULT Now() NOT NULL,
     CONSTRAINT "PK_User_Vectors" PRIMARY KEY ("user_id")
 );
 
--- 40. Book Vectors
+-- 40. Book Vectors (수정됨: VECTOR)
 CREATE TABLE "book_vectors" (
     "book_id" BIGINT NOT NULL,
-    "vector" HALFVEC(1024) NULL,
+    "vector" VECTOR(1024) NULL, -- [변경] HALFVEC -> VECTOR
     "created_at" TIMESTAMP DEFAULT Now() NOT NULL,
     CONSTRAINT "PK_Book_Vectors" PRIMARY KEY ("book_id")
 );
 
--- 41. Chapter Vectors
+-- 41. Chapter Vectors (수정됨: VECTOR)
 CREATE TABLE "chapter_vectors" (
     "chapter_id" BIGINT NOT NULL,
-    "vector" HALFVEC(1024) NULL,
+    "vector" VECTOR(1024) NULL, -- [변경] HALFVEC -> VECTOR
     "created_at" TIMESTAMP DEFAULT Now() NOT NULL,
     CONSTRAINT "PK_chapter_Vectors" PRIMARY KEY ("chapter_id")
 );
 
--- 42. Chapter Vectors RAG (260125 : 추가)
--- 42. RAG (Parent-Document Retriever)
+-- 42. Chapter Vectors RAG
 -- 42. RAG (Parent-Document Retriever)
 CREATE TABLE "rag_parent_documents" (
     "parent_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -640,10 +617,11 @@ CREATE TABLE "rag_parent_documents" (
     CONSTRAINT "PK_RAG_PARENT_DOCUMENTS" PRIMARY KEY ("parent_id")
 );
 
+-- (수정됨: VECTOR)
 CREATE TABLE "rag_child_vectors" (
     "child_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "parent_id" BIGINT NOT NULL,
-    "vector" HALFVEC(1024) NULL,
+    "vector" VECTOR(1024) NULL, -- [변경] HALFVEC -> VECTOR
     "content_text" TEXT NOT NULL,
     "chunk_index" INT NOT NULL,
     "paragraph_ids" TEXT[] NULL,
