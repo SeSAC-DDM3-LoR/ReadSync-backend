@@ -48,18 +48,19 @@ spring:
             redirect-uri: ${SERVER_URL}/login/oauth2/code/google
             scope: profile, email
 
+  # S3 설정
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+      s3:
+        bucket: ${S3_BUCKET_NAME}
+      region:
+        static: ap-northeast-2
+      stack:
+        auto: false
+
 jwt:
   secret: ${JWT_SECRET}
 
-# S3 설정
-cloud:
-  aws:
-    credentials:
-      access-key: ${AWS_ACCESS_KEY}
-      secret-key: ${AWS_SECRET_KEY}
-    s3:
-      bucket: ${S3_BUCKET_NAME}
-    region:
-      static: ap-northeast-2
-    stack:
-      auto: false
