@@ -74,15 +74,17 @@ public class ChatLogService {
         ChatMessageResponse response = ChatMessageResponse.from(savedChat);
 
         // 2. [수정] 프론트엔드가 구독 중인 STOMP 경로로 메시지 전송
-        // 프론트엔드 구독 경로: websocketClient.subscribeToChatRoom -> /topic/chat/{roomId}
-        String destination = "/topic/chat/" + request.getRoomId();
+        // 프론트엔드 구독 경로: websocketClient.subscribeToChatRoom -> /topic/chatroom/{roomId}
+        // RedisMessageListener와 경로 통일: /topic/chatroom/
+        String destination = "/topic/chatroom/" + request.getRoomId();
 
         messagingTemplate.convertAndSend(destination, response);
         log.info("Message sent to STOMP Broker [{}]: {}", destination, response.getContent());
 
         // 3. [선택] Redis Pub/Sub (서버가 여러 대일 경우에만 필요)
         // 단일 서버라면 아래 코드는 사실상 없어도 실시간 채팅은 동작합니다.
-        // 만약 멀티 서버 환경이라면 별도의 RedisSubscriber가 이 메시지를 받아서 다시 messagingTemplate으로 쏴줘야 합니다.
+        // 만약 멀티 서버 환경이라면 별도의 RedisSubscriber가 이 메시지를 받아서 다시 messagingTemplate으로 쏴줘야
+        // 합니다.
         String redisChannel = "chatRoom:" + request.getRoomId();
         redisTemplate.convertAndSend(redisChannel, response);
         log.info("Message sent to Redis Channel [{}]: {}", redisChannel, response.getContent());
