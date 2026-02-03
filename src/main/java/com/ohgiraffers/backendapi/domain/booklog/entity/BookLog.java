@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @SuperBuilder
-public class BookLog extends BaseTimeEntity {
+public class BookLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

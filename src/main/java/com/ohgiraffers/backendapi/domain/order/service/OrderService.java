@@ -137,4 +137,21 @@ public class OrderService {
 
         return savedOrder;
     }
+
+    /**
+     * 내 결제(주문) 내역 조회
+     */
+    public org.springframework.data.domain.Page<com.ohgiraffers.backendapi.domain.order.dto.OrderResponse> getMyOrders(
+            Long userId, org.springframework.data.domain.Pageable pageable) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        return orderRepository.findByUser(user, pageable)
+                .map(order -> {
+                    PaymentHistory history = paymentHistoryRepository.findTopByOrderOrderByCreatedAtDesc(order)
+                            .orElse(null);
+                    String receiptUrl = history != null ? history.getReceiptUrl() : null;
+                    return com.ohgiraffers.backendapi.domain.order.dto.OrderResponse.from(order, receiptUrl);
+                });
+    }
 }

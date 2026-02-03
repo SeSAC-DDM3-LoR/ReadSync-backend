@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 public enum ActivityType {
     READ_BOOK("책 읽기"),
     WRITE_REVIEW("리뷰 작성"),
+    HEARD_TTS("TTS 참여"),
     DAILY_ATTENDANCE("출석 체크");
+
 
     private final String description;
 }

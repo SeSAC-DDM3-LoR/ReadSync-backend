@@ -49,6 +49,10 @@ public class Order extends BaseTimeEntity {
     @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
 
+    public void updateStatus(OrderStatus status) {
+        this.status = status;
+    }
+
     // created_at, updated_at은 BaseTimeEntity에서 상속
 
     @ManyToOne(fetch = FetchType.LAZY)

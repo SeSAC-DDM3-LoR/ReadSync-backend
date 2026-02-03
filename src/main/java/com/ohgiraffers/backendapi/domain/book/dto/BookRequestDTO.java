@@ -31,14 +31,14 @@ public class BookRequestDTO {
                 .category(category)
                 .title(this.title)
                 .author(this.author)
-                .isAdultOnly(this.isAdultOnly)
+                .isAdultOnly(this.isAdultOnly != null ? this.isAdultOnly : false) // Handle null
                 .summary(this.summary)
                 .publisher(this.publisher)
                 .publishedDate(this.publishedDate)
                 .coverUrl(this.coverUrl)
-                .viewPermission(this.viewPermission)
+                .viewPermission(this.viewPermission != null ? this.viewPermission : ViewPermission.FREE) // Handle null
                 .price(this.price)
-                .language(this.language)
+                .language(this.language != null ? this.language : "ko") // Handle null (default Korean)
                 .build();
     }
 
