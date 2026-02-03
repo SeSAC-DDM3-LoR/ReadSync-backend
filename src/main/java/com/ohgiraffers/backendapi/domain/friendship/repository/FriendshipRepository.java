@@ -24,8 +24,9 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
 
         // 두 유저 간의 친구 관계 조회 (상태별 중복 체크용)
         @Query("select f from Friendship f " +
-                        "where (f.requester = :userA and f.addressee = :userB) " +
-                        "or (f.requester = :userB and f.addressee = :userA)")
+                        "where ((f.requester = :userA and f.addressee = :userB) " +
+                        "or (f.requester = :userB and f.addressee = :userA)) " +
+                        "and f.deletedAt is null")
         Optional<Friendship> findByUsers(@Param("userA") User userA, @Param("userB") User userB);
 
         // 내 친구 목록 조회
@@ -34,7 +35,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
                         "left join fetch r.userInformation " +
                         "join fetch f.addressee a " +
                         "left join fetch a.userInformation " +
-                        "where r.id = :userId or a.id = :userId " +
+                        "where (r.id = :userId or a.id = :userId) " +
                         "and f.status = :status " +
                         "and f.deletedAt is null")
         List<Friendship> findMyFriendships(@Param("userId") Long userId, @Param("status") FriendshipStatus status);

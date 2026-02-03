@@ -28,4 +28,6 @@ public interface RoomInvitationRepository extends JpaRepository<RoomInvitation, 
 
     // 보낸 초대장 전체 조회
     List<RoomInvitation> findBySender(User sender);
+
+    boolean existsByReadingRoomAndReceiverAndStatus(ReadingRoom room, User user, InvitationStatus invitationStatus);
 }
