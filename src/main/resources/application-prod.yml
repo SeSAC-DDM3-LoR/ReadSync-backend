@@ -23,7 +23,9 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update # 추후 validate로 변경 권장
+#      ddl-auto: update # 추후 validate로 변경 권장
+      ddl-auto: none
+#      show-sql: true
     show-sql: false
     properties:
       hibernate:
