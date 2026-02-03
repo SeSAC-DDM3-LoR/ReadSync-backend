@@ -9,9 +9,11 @@ import com.ohgiraffers.backendapi.domain.readingroom.dto.CreateRoomRequest;
 import com.ohgiraffers.backendapi.domain.readingroom.entity.ReadingRoom;
 import com.ohgiraffers.backendapi.domain.readingroom.entity.RoomParticipant;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.ConnectionStatus;
+import com.ohgiraffers.backendapi.domain.readingroom.enums.InvitationStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.enums.RoomStatus;
 import com.ohgiraffers.backendapi.domain.readingroom.event.RoomFinishedEvent;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.ReadingRoomRepository;
+import com.ohgiraffers.backendapi.domain.readingroom.repository.RoomInvitationRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.repository.RoomParticipantRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.enums.UserActivityStatus;
@@ -21,6 +23,7 @@ import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +43,8 @@ public class ReadingRoomService {
     private final ExpLogService expLogService;
     private final UserStatusService userStatusService;
     private final ApplicationEventPublisher publisher;
-    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final RoomInvitationRepository roomInvitationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 독서룸 생성
     @Transactional
@@ -95,7 +99,15 @@ public class ReadingRoomService {
         } else {
             // 방 상태 - 재생중 확인
             if (room.getStatus() == RoomStatus.PLAYING) {
-                throw new CustomException(ErrorCode.ROOM_IS_PLAYING);
+                // 초대장이 있고, 상태가 ACCEPTED(수락됨) 혹은 WAITING(대기중)인 경우 통과
+                boolean hasInvitation = roomInvitationRepository.existsByReadingRoomAndReceiverAndStatus(
+                        room, user, InvitationStatus.ACCEPTED
+                );
+
+                // 초대장도 없다면 에러 발생 (입장 불가)
+                if (!hasInvitation) {
+                    throw new CustomException(ErrorCode.ROOM_IS_PLAYING);
+                }
             }
 
             // 현재 인원 확인
@@ -194,6 +206,8 @@ public class ReadingRoomService {
         validateHost(room, hostId);
 
         room.updateStatus(RoomStatus.PLAYING);
+
+        notifyRoomStatusChange(roomId, RoomStatus.PLAYING);
     }
 
     // 독서 일시정지/재개
@@ -205,8 +219,10 @@ public class ReadingRoomService {
         // PLAYING <-> PAUSED 토글
         if (room.getStatus() == RoomStatus.PLAYING) {
             room.updateStatus(RoomStatus.PAUSED);
+            notifyRoomStatusChange(roomId, RoomStatus.PAUSED);
         } else if (room.getStatus() == RoomStatus.PAUSED) {
             room.updateStatus(RoomStatus.PLAYING);
+            notifyRoomStatusChange(roomId, RoomStatus.PAUSED);
         } else {
             throw new CustomException(ErrorCode.INVALID_REQUEST_STATUS, "재생 중이거나 일시정지 상태에서만 사용 가능합니다.");
         }
@@ -264,6 +280,19 @@ public class ReadingRoomService {
     private void validateHost(ReadingRoom room, Long hostId) {
         if (!room.getHost().getId().equals(hostId)) {
             throw new CustomException(ErrorCode.NOT_HOST);
+        }
+    }
+
+    // 상태 변경 알림 메서드
+    private void notifyRoomStatusChange(Long roomId, RoomStatus status) {
+        try {
+            java.util.Map<String, Object> message = new java.util.HashMap<>();
+            message.put("type", "STATUS_CHANGE");
+            message.put("roomId", roomId);
+            message.put("status", status);
+            messagingTemplate.convertAndSend("/topic/room/" + roomId, message);
+        } catch (Exception e) {
+            System.err.println("Failed to send status update: " + e.getMessage());
         }
     }
 
