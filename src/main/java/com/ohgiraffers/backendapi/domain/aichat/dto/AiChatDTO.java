@@ -63,7 +63,8 @@ public class AiChatDTO {
         private String user_msg;
         private String chat_type;
         private String rag_context;
-        // previous_messages: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+        // previous_messages: [{"role": "user", "content": "..."}, {"role": "assistant",
+        // "content": "..."}]
         private java.util.List<java.util.Map<String, String>> previous_messages;
     }
 
@@ -73,5 +74,22 @@ public class AiChatDTO {
     public static class AiGenerateResponse {
         private String response;
         private Integer token_usage;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AiRewriteRequest {
+        private String user_msg;
+        // previous_messages: [{"role": "user", "content": "..."}, ...]
+        private java.util.List<java.util.Map<String, String>> previous_messages;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AiRewriteResponse {
+        private String rewritten_msg;
     }
 }

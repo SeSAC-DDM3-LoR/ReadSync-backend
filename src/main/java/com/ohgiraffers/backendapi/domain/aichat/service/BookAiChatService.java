@@ -168,10 +168,27 @@ public class BookAiChatService {
         String ragContext = null;
         String relatedParagraphId = null;
 
-        // 2. RAG 검색 (Content QA일 경우)
-        if (ChatType.CONTENT_QA.equals(chatType) || ChatType.SUMMARY.equals(chatType)) {
-            List<RagSearchResponseDTO> searchResults = ragService.searchRag(room.getChapter().getChapterId(),
-                    request.getUserMessage());
+        // 2. RAG 검색 및 Query Rewriting
+        if (ChatType.CONTENT_QA.equals(chatType) || ChatType.SUMMARY.equals(chatType) || ChatType.CONTENT_QA_CONTEXT.equals(chatType)) {
+            
+            String queryForRag = request.getUserMessage();
+
+            // 2-1. 문맥 파악이 필요한 경우 Query Rewriting 수행
+            if (ChatType.CONTENT_QA_CONTEXT.equals(chatType)) {
+                try {
+                    List<Map<String, String>> previousMessages = getPreviousMessages(room);
+                    AiChatDTO.AiRewriteResponse rewriteResponse = callAiServerRewrite(request.getUserMessage(), previousMessages);
+                    if (rewriteResponse != null && rewriteResponse.getRewritten_msg() != null) {
+                        queryForRag = rewriteResponse.getRewritten_msg();
+                        log.info("Query Rewritten: '{}' -> '{}'", request.getUserMessage(), queryForRag);
+                    }
+                } catch (Exception e) {
+                    log.warn("Query Rewrite failed, using original message", e);
+                }
+            }
+
+            // 2-2. RAG 검색 수행 (재구성된 쿼터 또는 원본 쿼리 사용)
+            List<RagSearchResponseDTO> searchResults = ragService.searchRag(room.getChapter().getChapterId(), queryForRag);
 
             if (!searchResults.isEmpty()) {
                 // 상위 3개 정도만 컨텍스트로 사용
@@ -252,7 +269,7 @@ public class BookAiChatService {
                     BookAiChat chat = BookAiChat.builder()
                             .chatRoom(room)
                             .user(user)
-                            .chatType(request.getChatType() != null ? request.getChatType() : ChatType.CONTENT_QA)
+                            .chatType(request.getChatType() != null ? request.getChatType() : ChatType.CONTENT_QA) // Stream 요청에서는 주로 이미 분류된 타입이 오거나 기본값 사용
                             .userMessage(request.getUserMessage())
                             .aiMessage(fullResponse.toString())
                             .responseTimeMs((int) responseTimeMs)
@@ -366,6 +383,21 @@ public class BookAiChatService {
                 .bodyValue(req)
                 .retrieve()
                 .bodyToMono(AiChatDTO.AiGenerateResponse.class)
+                .block();
+    }
+
+    private AiChatDTO.AiRewriteResponse callAiServerRewrite(String userMsg, List<Map<String, String>> previousMessages) {
+        AiChatDTO.AiRewriteRequest req = AiChatDTO.AiRewriteRequest.builder()
+                .user_msg(userMsg)
+                .previous_messages(previousMessages)
+                .build();
+
+        return aiWebClient.post()
+                .uri("/api/v1/chat/context-rewrite")
+                .bodyValue(req)
+                .retrieve()
+                .bodyToMono(AiChatDTO.AiRewriteResponse.class)
+                .timeout(Duration.ofSeconds(10)) // 짧은 타임아웃
                 .block();
     }
 

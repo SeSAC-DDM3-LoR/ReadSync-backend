@@ -94,9 +94,14 @@ public class ChapterVectorService {
 
     /**
      * DB 저장 로직만 트랜잭션으로 묶어 효율을 높였습니다. (Upsert)
+     * [수정] Chapter 엔티티 대신 ID를 받아 내부에서 트랜잭션 내 조회를 수행합니다.
      */
-    public void saveOrUpdateChapterVector(Chapter chapter, float[] vectorResponse) {
-        ChapterVector chapterVector = chapterVectorRepository.findById(chapter.getChapterId())
+    @Transactional
+    public void saveVectorForChapter(Long chapterId, float[] vectorResponse) {
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new IllegalArgumentException("Chapter not found for saving vector: " + chapterId));
+
+        ChapterVector chapterVector = chapterVectorRepository.findById(chapterId)
                 .map(existing -> {
                     existing.updateVector(vectorResponse);
                     return existing;
@@ -107,6 +112,13 @@ public class ChapterVectorService {
                         .build());
 
         chapterVectorRepository.save(chapterVector);
+    }
+
+    /**
+     * (Deprecated) 기존 메서드 유지 (하위 호환성)
+     */
+    public void saveOrUpdateChapterVector(Chapter chapter, float[] vectorResponse) {
+        saveVectorForChapter(chapter.getChapterId(), vectorResponse);
     }
 
 }

@@ -45,6 +45,10 @@ public enum ErrorCode {
     FILE_UPLOAD_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "FI002", "파일 업로드 중 오류가 발생했습니다."),
     FILE_READ_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "FI003", "파일을 읽는 중 오류가 발생했습니다."),
     FILE_DELETE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "FI004", "파일 삭제 중 오류가 발생했습니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FI005", "S3 파일 업로드에 실패했습니다."),
+    INVALID_FILE(HttpStatus.BAD_REQUEST, "FI006", "유효하지 않은 파일입니다."),
+    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "FI007", "지원하지 않는 파일 형식입니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "FI008", "파일 크기가 제한을 초과했습니다."),
 
     // 리뷰
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "해당 리뷰를 찾을 수 없습니다."),
