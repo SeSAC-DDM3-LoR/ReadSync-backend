@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.ohgiraffers.backendapi.global.auth.oauth.service.CustomOAuth2UserService;
 import com.ohgiraffers.backendapi.global.auth.oauth.handler.OAuth2SuccessHandler;
 import com.ohgiraffers.backendapi.global.auth.oauth.handler.OAuth2FailureHandler;
+import org.springframework.web.accept.ContentNegotiationManager;
 
 @Configuration
 @EnableWebSecurity
@@ -69,7 +70,8 @@ public class SecurityConfig {
                                                 .successHandler(oAuth2SuccessHandler)
                                                 .failureHandler(oAuth2FailureHandler))
                                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                                                UsernamePasswordAuthenticationFilter.class);
+                                                UsernamePasswordAuthenticationFilter.class)
+                                .setSharedObject(ContentNegotiationManager.class, new ContentNegotiationManager());
 
                 return http.build();
         }
