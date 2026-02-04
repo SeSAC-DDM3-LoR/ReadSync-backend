@@ -79,7 +79,7 @@ public class LibraryService {
         library.delete();
     }
 
-    // @Transactional // ReadingEventListener에서 트랜잭션 관리
+    @Transactional // ReadingEventListener에서 트랜잭션 관리
     @AwardExp(type = ActivityType.READ_BOOK)
     public Library syncOverallProgress(Long libraryId, int newlyReadCount) {
         // 1. 서재와 연결된 도서(Book) 정보를 가져옵니다.
@@ -89,7 +89,9 @@ public class LibraryService {
         Integer totalParagraphs = library.getBook().getTotalParagraphs();
 
         if (totalParagraphs == null || totalParagraphs == 0) {
-            return null;
+            // 분모가 0이면 진행률 계산 불가하지만, 읽은 횟수는 저장해야 함
+            // 총 문단 수를 1로 가정하여 최소한의 계산 수행 (Infinity 방지)
+            totalParagraphs = 1;
         }
 
         library.incrementReadCount(newlyReadCount);
@@ -125,7 +127,7 @@ public class LibraryService {
         return library;
     }
 
-    // @Transactional // ReadingEventListener에서 트랜잭션 관리
+    @Transactional // ReadingEventListener에서 트랜잭션 관리
     public void saveLastChapter(Long libraryId, Long chapterId) {
         Library library = libraryRepository.findById(libraryId)
                 .orElseThrow(() -> new IllegalArgumentException("서재를 찾을 수 없습니다."));

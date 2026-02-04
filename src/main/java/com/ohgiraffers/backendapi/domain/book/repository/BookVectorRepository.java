@@ -20,10 +20,11 @@ public interface BookVectorRepository extends JpaRepository<BookVector, Long> {
         // 여기서는 (book_id NOT IN (:excludeIds)) 형태로 처리하되, excludeIds가 비어있으면 쿼리 에러가 날 수
         // 있음.
         // 따라서 Service에서 비어 있다면 -1L을 넣어서 보내는 것이 안전합니다.
-        @NativeQuery(value = "SELECT book_id, (1 - (vector <=> cast(:queryVector as halfvec))) as score " +
+        @NativeQuery(value = "SELECT book_id, MAX(1 - (vector <=> cast(:queryVector as halfvec))) as score " +
                         "FROM book_vectors " +
                         "WHERE (:hasExcludes = false OR book_id NOT IN (:excludeIds)) " +
-                        "ORDER BY vector <=> cast(:queryVector as halfvec)", countQuery = "SELECT count(*) FROM book_vectors WHERE (:hasExcludes = false OR book_id NOT IN (:excludeIds))")
+                        "GROUP BY book_id " +
+                        "ORDER BY score DESC, book_id ASC", countQuery = "SELECT count(DISTINCT book_id) FROM book_vectors WHERE (:hasExcludes = false OR book_id NOT IN (:excludeIds))")
         Page<Object[]> findSimilarBookIds(
                         @Param("queryVector") String queryVector,
                         @Param("excludeIds") List<Long> excludeIds,

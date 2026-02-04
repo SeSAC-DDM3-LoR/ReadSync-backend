@@ -2,21 +2,20 @@ package com.ohgiraffers.backendapi.domain.book.service;
 
 import com.ohgiraffers.backendapi.domain.book.dto.BatchVectorResponseDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookRecommendationDTO;
-import com.ohgiraffers.backendapi.domain.book.dto.BookResponseDTO;
 import com.ohgiraffers.backendapi.domain.book.dto.BookVectorDTO;
 import com.ohgiraffers.backendapi.domain.book.entity.Book;
 import com.ohgiraffers.backendapi.domain.book.entity.BookVector;
 import com.ohgiraffers.backendapi.domain.book.repository.BookRepository;
 import com.ohgiraffers.backendapi.domain.book.repository.BookVectorRepository;
 import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
-import com.ohgiraffers.backendapi.domain.chapter.entity.ChapterVector;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
 import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterVectorRepository;
 import com.ohgiraffers.backendapi.domain.chapter.service.ChapterVectorService;
 import com.ohgiraffers.backendapi.domain.user.entity.UserPreference;
 import com.ohgiraffers.backendapi.domain.user.repository.UserPreferenceRepository;
-import com.ohgiraffers.backendapi.domain.user.service.UserPreferenceService;
-import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository; // 추가
+import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +42,8 @@ public class BookVectorService {
     private final WebClient embeddingServerWebClient;
     private final ChapterVectorService chapterVectorService;
     private final UserPreferenceRepository userPreferenceRepository;
-    private final LibraryRepository libraryRepository; // 추가
+    private final LibraryRepository libraryRepository;
+    private final PlatformTransactionManager transactionManager; // 트랜잭션 수동 제어를 위한 매니저
 
     /**
      * 특정 도서 ID를 기준으로 유사한 도서를 추천합니다.
@@ -64,7 +64,11 @@ public class BookVectorService {
      */
     @Transactional(readOnly = true)
     public Page<BookRecommendationDTO> getRecommendationsByVector(Long userId, Pageable pageable) {
-        UserPreference userPreference = userPreferenceRepository.findById(userId).orElseThrow();
+        UserPreference userPreference = userPreferenceRepository.findById(userId).orElse(null);
+        if (userPreference == null || userPreference.getVector() == null) {
+            // [Fix] 취향 데이터가 없으면 빈 결과를 반환하여 프론트엔드에서 랜덤 추천(Fallback)을 수행하도록 유도
+            return Page.empty(pageable);
+        }
         String vectorString = Arrays.toString(userPreference.getVector());
 
         // [수정] 사용자가 이미 소유한(라이브러리에 있는) 모든 도서 ID 가져오기
@@ -323,42 +327,33 @@ public class BookVectorService {
                     }
 
                     try {
-                        // [중요] 비동기 스레드에서 엔티티를 다시 조회하여 영속 상태(Managed)로 만듦
-                        Book managedBook = bookRepository.findById(bookId).orElseThrow();
+                        // [중요] 비동기 콜백은 별도 스레드에서 실행되므로 트랜잭션 범위를 명시적으로 설정해야 함
+                        // 그렇지 않으면 조회한 엔티티가 즉시 Detached 상태가 되어, 저장 시 에러 발생
+                        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                            Book managedBook = bookRepository.findById(bookId).orElseThrow();
 
-                        // 3. 챕터 벡터 저장 (Upsert)
-                        List<float[]> chapterVectors = response.getChapterVectors();
-                        List<Integer> validParagraphCounts = new java.util.ArrayList<>();
+                            // 3. 챕터 벡터 저장 (Upsert)
+                            List<float[]> chapterVectors = response.getChapterVectors();
 
-                        for (int i = 0; i < chapterIds.size(); i++) {
-                            if (i >= chapterVectors.size())
-                                break; // IndexOutOfBounds 방지
+                            for (int i = 0; i < chapterIds.size(); i++) {
+                                if (i >= chapterVectors.size())
+                                    break;
+                                Long cId = chapterIds.get(i);
+                                final int index = i;
+                                chapterVectorService.saveVectorForChapter(cId, chapterVectors.get(index));
+                            }
 
-                            Long cId = chapterIds.get(i);
-                            final int index = i; // 람다 캡처를 위한 effectively final 변수
+                            // 4. 북 벡터 저장
+                            float[] optimizedAveragedVector;
+                            if (response.getBookVector() != null && response.getBookVector().length > 0) {
+                                optimizedAveragedVector = response.getBookVector();
+                            } else {
+                                throw new RuntimeException("파이썬 서버로부터 북 벡터를 받지 못했습니다.");
+                            }
 
-                            // [수정] 더 이상 여기서 엔티티를 조회하지 않고, ID만 넘겨서 트랜잭션 처리를 위임합니다.
-                            chapterVectorService.saveVectorForChapter(cId, chapterVectors.get(index));
-
-                            // 문단 수 정보는 일단 Fallback 계산을 위해 필요하다면 별도로 가져와야 하지만,
-                            // 현재 파이썬 응답을 전적으로 신뢰하므로 validParagraphCounts 수집 로직도 제거 가능합니다.
-                            // 다만, 혹시 모를 미래를 위해 Paragraphs 정보가 필요하다면 별도 쿼리가 필요할 수 있습니다.
-                            // 여기서는 일단 제거하고, 파이썬 응답 신뢰로 갑니다.
-                        }
-
-                        // 4. [수정] Python 서버에서 계산된 최적화된 북 벡터 사용 (Power Mean p=2.5)
-                        float[] optimizedAveragedVector;
-                        if (response.getBookVector() != null && response.getBookVector().length > 0) {
-                            optimizedAveragedVector = response.getBookVector();
-                        } else {
-                            // [Fallback]
-                            optimizedAveragedVector = calculateOptimizedBookVector(chapterVectors,
-                                    validParagraphCounts);
-                        }
-
-                        // 5. 북 벡터 저장
-                        saveOrUpdateBookVector(managedBook, optimizedAveragedVector);
-                        System.out.println("✅ 도서 벡터 갱신 완료: " + managedBook.getTitle());
+                            saveOrUpdateBookVector(managedBook, optimizedAveragedVector);
+                            System.out.println("✅ 도서 벡터 갱신 완료: " + managedBook.getTitle());
+                        });
 
                     } catch (Exception e) {
                         System.err.println("❌ 벡터 저장 중 오류 발생: " + e.getMessage());

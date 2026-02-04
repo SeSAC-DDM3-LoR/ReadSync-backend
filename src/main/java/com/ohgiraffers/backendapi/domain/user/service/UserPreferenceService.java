@@ -95,9 +95,14 @@ public class UserPreferenceService {
 
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
-        // 2. 해당 챕터의 임베딩 벡터 로드
+        // 2. 해당 챕터의 임베딩 벡터 로드 (없으면 스킵)
         ChapterVector chapterVector = chapterVectorRepository.findByChapter(chapter)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+                .orElse(null);
+
+        if (chapterVector == null) {
+            // 벡터가 없으면 취향 분석을 할 수 없으므로 조용히 리턴 (트랜잭션 롤백 방지)
+            return;
+        }
 
         float[] chapterVec = chapterVector.getVector();
 
