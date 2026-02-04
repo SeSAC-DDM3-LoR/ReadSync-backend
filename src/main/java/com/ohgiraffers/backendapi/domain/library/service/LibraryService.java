@@ -89,9 +89,7 @@ public class LibraryService {
         Integer totalParagraphs = library.getBook().getTotalParagraphs();
 
         if (totalParagraphs == null || totalParagraphs == 0) {
-            // 분모가 0이면 진행률 계산 불가하지만, 읽은 횟수는 저장해야 함
-            // 총 문단 수를 1로 가정하여 최소한의 계산 수행 (Infinity 방지)
-            totalParagraphs = 1;
+            return null;
         }
 
         library.incrementReadCount(newlyReadCount);
@@ -108,20 +106,28 @@ public class LibraryService {
         library.updateOverallProgress(clampedProgress);
 
         // 6. 마일스톤 체크 (30%, 70%, 100%) 및 중복 업데이트 방지
-        int currentMilestone = 0;
+        // 6. 마일스톤 체크 (Cumulative Weighting: 30(0.3) + 70(0.5) + 100(0.7) = Max 1.5)
         int lastStep = library.getLastVectorUpdateStep();
+        float totalWeight = 0.0f;
+        int maxMilestone = 0;
 
-        // 높은 마일스톤부터 체크해야 급격한 진행률 상승 시에도 가장 중요한 단계를 포착함
-        if (lastStep < 100 && clampedProgress >= 100)
-            currentMilestone = 100;
-        else if (lastStep < 70 && clampedProgress >= 70)
-            currentMilestone = 70;
-        else if (lastStep < 30 && clampedProgress >= 30)
-            currentMilestone = 30;
+        if (lastStep < 30 && clampedProgress >= 30) {
+            totalWeight += 0.3f;
+            maxMilestone = 30;
+        }
+        if (lastStep < 70 && clampedProgress >= 70) {
+            totalWeight += 0.5f;
+            maxMilestone = 70;
+        }
+        if (lastStep < 100 && clampedProgress >= 100) {
+            totalWeight += 0.7f;
+            maxMilestone = 100;
+        }
 
-        if (currentMilestone > 0) {
-            library.updateVectorUpdateStep(currentMilestone);
-            library.setReachedMilestone(currentMilestone);
+        if (totalWeight > 0) {
+            library.updateVectorUpdateStep(maxMilestone);
+            library.setReachedMilestone(maxMilestone);
+            library.setGainedWeight(totalWeight);
         }
 
         return library;

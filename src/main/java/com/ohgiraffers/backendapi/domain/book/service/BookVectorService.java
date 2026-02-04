@@ -69,7 +69,33 @@ public class BookVectorService {
             // [Fix] 취향 데이터가 없으면 빈 결과를 반환하여 프론트엔드에서 랜덤 추천(Fallback)을 수행하도록 유도
             return Page.empty(pageable);
         }
-        String vectorString = Arrays.toString(userPreference.getVector());
+        // [Fix] 장기(0.7) + 단기(0.3) 하이브리드 추천 적용
+        float[] longVec = userPreference.getVector();
+        float[] shortVec = userPreference.getShortTermVector();
+        float[] hybridVec;
+
+        if (shortVec != null && shortVec.length == longVec.length) {
+            hybridVec = new float[longVec.length];
+            float sumSq = 0f;
+            for (int i = 0; i < longVec.length; i++) {
+                // 가중치 비율: 장기 70%, 단기 30%
+                float val = (longVec[i] * 0.7f) + (shortVec[i] * 0.3f);
+                hybridVec[i] = val;
+                sumSq += val * val;
+            }
+
+            // 정규화 (유사도 검색 정확도 향상)
+            float norm = (float) Math.sqrt(sumSq);
+            if (norm > 1e-9) {
+                for (int i = 0; i < hybridVec.length; i++) {
+                    hybridVec[i] /= norm;
+                }
+            }
+        } else {
+            hybridVec = longVec;
+        }
+
+        String vectorString = Arrays.toString(hybridVec);
 
         // [수정] 사용자가 이미 소유한(라이브러리에 있는) 모든 도서 ID 가져오기
         List<Long> excludeIds = libraryRepository.findBookIdsByUserId(userId);
