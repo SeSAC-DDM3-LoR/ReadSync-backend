@@ -4,7 +4,6 @@ import com.ohgiraffers.backendapi.domain.bookmark.entity.Bookmark;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 
 @Getter
 @Builder
@@ -16,7 +15,7 @@ public class BookmarkResponseDTO {
     private Long chapterId;
     private Integer lastReadPos;
     private BigDecimal progress;
-//    private byte[] readMask;
+    private byte[] readMask;
 
     // Entity -> DTO 변환 메서드
     public static BookmarkResponseDTO from(Bookmark bookmark) {
@@ -26,7 +25,7 @@ public class BookmarkResponseDTO {
                 .chapterId(bookmark.getChapter().getChapterId())
                 .lastReadPos(bookmark.getLastReadPos())
                 .progress(bookmark.getProgress())
-//                .readMask(bookmark.getReadMask())
+                .readMask(bookmark.getReadMask())
                 .build();
     }
 }

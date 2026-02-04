@@ -13,9 +13,11 @@ import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserPreferenceService {
@@ -82,8 +84,9 @@ public class UserPreferenceService {
         return newVec;
     }
 
-    // [신규] 진행률(30, 70, 100%) 도달 시 호출: 가중치 차등 적용
-    public void updatePreferenceByProgress(Long userId, Long chapterId, int milestone) {
+    // [신규] 진행률(30, 70, 100%) 도달 시 호출: 가중치 차등 적용 (Cumulative Weighting)
+    @Transactional
+    public void updatePreferenceByProgress(Long userId, Long chapterId, float totalMultiplier) {
         // 1. 취향 벡터 로드
         UserPreference pref = preferenceRepository.findByUser_Id(userId)
                 .orElseGet(() -> {
@@ -94,23 +97,23 @@ public class UserPreferenceService {
 
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
-        // 2. 해당 챕터의 임베딩 벡터 로드
+        // 2. 해당 챕터의 임베딩 벡터 로드 (없으면 스킵)
         ChapterVector chapterVector = chapterVectorRepository.findByChapter(chapter)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+                .orElse(null);
+
+        if (chapterVector == null) {
+            // 벡터가 없으면 취향 분석을 할 수 없으므로 조용히 리턴 (트랜잭션 롤백 방지)
+            log.warn("⚠️ [UserPreference] 챕터 벡터가 존재하지 않습니다. 취향 반영 실패. ChapterId: {}", chapterId);
+            return;
+        }
+
+        log.info("✅ [UserPreference] 챕터 벡터 로드 성공. 취향 업데이트 진행 (Multiplier: {})", totalMultiplier);
 
         float[] chapterVec = chapterVector.getVector();
 
-        // 3. 마일스톤 별 가중치 조절
-        float multiplier = 1.0f;
-        if (milestone == 30)
-            multiplier = 0.5f; // 30%: 약한 반영
-        else if (milestone == 70)
-            multiplier = 1.0f; // 70%: 표준 반영
-        else if (milestone == 100)
-            multiplier = 1.5f;// 100%: 강한 반영
-
-        float weightLong = ALPHA_LONG * multiplier;
-        float weightShort = ALPHA_SHORT * multiplier;
+        // 3. [Update] 외부에서 계산된 누적 가중치(Multiplier)를 그대로 적용
+        float weightLong = ALPHA_LONG * totalMultiplier;
+        float weightShort = ALPHA_SHORT * totalMultiplier;
 
         // 4. 지수 이동 평균(EMA) 적용
         float[] updatedLong = applyEma(pref.getVector(), chapterVec, weightLong);

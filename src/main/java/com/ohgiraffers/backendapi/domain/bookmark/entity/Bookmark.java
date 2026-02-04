@@ -46,16 +46,28 @@ public class Bookmark extends BaseTimeEntity {
 
     public int syncReadStatus(List<Integer> newIndices, Integer lastReadPos) {
 
+        // [Self-Healing] 입력된 문단 번호가 현재 메타데이터(paragraphs)보다 크면, 메타데이터 자동 수정
+        int maxIndex = newIndices.isEmpty() ? 0 : java.util.Collections.max(newIndices);
+        if (maxIndex > chapter.getParagraphs()) {
+            chapter.updateParagraphs(maxIndex);
+        }
+
         String currentMask = new String(this.readMask, StandardCharsets.UTF_8);
         StringBuilder sb = new StringBuilder(currentMask);
+
+        // 마스크 길이가 부족하면 확장 ('0'으로 채움)
+        if (sb.length() < chapter.getParagraphs()) {
+            sb.append("0".repeat(chapter.getParagraphs() - sb.length()));
+        }
 
         int newlyReadCount = 0; // 이번 호출에서 처음 읽게 된 문단 수
 
         for (Integer index : newIndices) {
-            // 범위를 벗어난 인덱스는 무시 (1 ~ paragraphs 범위만 허용)
-            if (index < 1 || index > chapter.getParagraphs()) {
+            // 범위를 벗어난 인덱스는 무시 (최소값 1 체크)
+            if (index < 1) {
                 continue;
             }
+            // maxIndex 체크 로직 제거 (위에서 확장했으므로 항상 범위 내 존재하거나, 1 미만만 걸러짐)
 
             int setIndex = index - 1;
             // 기존에 '0'이었을 때만 '1'로 바꾸고 카운트를 올립니다 (중복 반영 방지)

@@ -42,7 +42,7 @@ public class ExpLogController {
     }
 
     @Operation(summary = "[사용자] 내 경험치 로그 조회 (페이징)", description = "현재 로그인한 사용자의 경험치 획득 내역을 조회합니다.")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/me")
     public ResponseEntity<Page<ExpLogResponseDTO>> getMyExpLogs(
             @CurrentUserId Long userId,
