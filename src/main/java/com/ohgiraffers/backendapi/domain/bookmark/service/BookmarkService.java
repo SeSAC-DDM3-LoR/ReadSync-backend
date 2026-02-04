@@ -43,14 +43,15 @@ public class BookmarkService {
 
     private final Map<String, Integer> pendingCounts = new ConcurrentHashMap<>();
 
-    // @Transactional // ReadingEventListener에서 트랜잭션 관리
+    @Transactional // ReadingEventListener에서 트랜잭션 관리
     public BookmarkUpdateResult saveOrUpdate(BookmarkRequestDTO dto) {
         // ... 기존 로직 유지 (Chapter 조회, Bookmark 확보, syncReadStatus 등)
         Chapter chapter = chapterRepository.findById(dto.getChapterId())
                 .orElseThrow(() -> new IllegalArgumentException("챕터가 없습니다."));
 
+        // [Fix] 비관적 락을 사용하여, 동시 다발적인 저장 요청을 순차적으로 처리 (Data Loss 방지)
         Bookmark bookmark = bookmarkRepository
-                .findByLibrary_LibraryIdAndChapter_ChapterId(dto.getLibraryId(), dto.getChapterId())
+                .findByLibraryAndChapterWithLock(dto.getLibraryId(), dto.getChapterId())
                 .orElseGet(() -> {
                     Library library = libraryRepository.findById(dto.getLibraryId())
                             .orElseThrow(() -> new IllegalArgumentException("서재를 찾을 수 없습니다."));

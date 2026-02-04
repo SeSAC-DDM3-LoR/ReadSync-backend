@@ -62,6 +62,10 @@ public class Library extends BaseTimeEntity {
     @Setter
     private int reachedMilestone = 0; // 이번 업데이트에서 달성한 마일스톤 (일시적)
 
+    @Transient
+    @Setter
+    private float gainedWeight = 0.0f; // [New] 이번 업데이트에서 획득한 가중치 합계
+
     public void incrementReadCount(int count) {
         if (this.totalReadParagraphs == null) {
             this.totalReadParagraphs = 0;
