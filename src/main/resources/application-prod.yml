@@ -111,3 +111,7 @@ toss:
   secret-key: ${TOSS_SECRET_KEY}
   regular-client-key: ${TOSS_REGULAR_CLIENT_KEY}
   regular-secret-key: ${TOSS_REGULAR_SECRET_KEY}
+# AI 서버 (TTS)
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://localhost:8000}

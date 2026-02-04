@@ -19,9 +19,11 @@ import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.enums.UserActivityStatus;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.domain.user.service.UserStatusService;
+import com.ohgiraffers.backendapi.global.client.TtsClient;
 import com.ohgiraffers.backendapi.global.error.CustomException;
 import com.ohgiraffers.backendapi.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -45,6 +48,7 @@ public class ReadingRoomService {
     private final ApplicationEventPublisher publisher;
     private final RoomInvitationRepository roomInvitationRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final TtsClient ttsClient;
 
     // 독서룸 생성
     @Transactional
@@ -205,6 +209,29 @@ public class ReadingRoomService {
         validateHost(room, hostId);
 
         room.updateStatus(RoomStatus.PLAYING);
+
+        // TTS 오디오 URL 가져오기 (AI 서버 호출)
+        try {
+            String chapterId = "ch" + room.getCurrentChapterId();
+            String paragraphId = "p" + (room.getLastReadPos() + 1); // 다음 문단
+
+            String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId)
+                    .block(); // 동기 호출 (필요 시 비동기 처리 가능)
+
+            // WebSocket으로 오디오 URL 전송
+            messagingTemplate.convertAndSend(
+                    "/topic/room/" + roomId,
+                    java.util.Map.of(
+                            "event", "PLAY_AUDIO",
+                            "audioUrl", audioUrl,
+                            "chapterId", chapterId,
+                            "paragraphId", paragraphId));
+
+            log.info("TTS audio URL sent to room {}: {}", roomId, audioUrl);
+        } catch (Exception e) {
+            log.error("Failed to get TTS audio URL for room {}", roomId, e);
+            // TTS 실패해도 방 상태는 PLAYING으로 변경 (채팅은 가능하도록)
+        }
 
         notifyRoomStatusChange(roomId, RoomStatus.PLAYING);
     }
