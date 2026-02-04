@@ -10,7 +10,7 @@ file:
 spring:
   sql:
     init:
-      mode: always
+      mode: never
 #      mode: always
       continue-on-error: true
     
