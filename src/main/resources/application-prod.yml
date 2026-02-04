@@ -1,15 +1,18 @@
 server:
   port: 8080
+#  servlet:
+#    context-path: /api
+  forward-headers-strategy: native
 
 file:
-  upload-dir: /tmp/uploads/
+  upload-dir: ${FILE_UPLOAD_DIR:/tmp/uploads/}
 
 spring:
   sql:
     init:
-#      mode: never  # 운영 환경에서는 절대 자동 실행 금지 (데이터 보호)
-    mode: always
-    continue-on-error: true
+      mode: never  # 운영 환경에서는 절대 자동 실행 금지 (데이터 보호)
+#    mode: always
+      continue-on-error: true
     
   config:
     activate:
@@ -32,10 +35,10 @@ spring:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-#  data:
-#    redis:
-#      host: ${REDIS_HOST}
-#      port: ${REDIS_PORT}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 #      ssl:
 #        enabled: true
 
@@ -47,7 +50,7 @@ spring:
           kakao:
             client-id: ${KAKAO_CLIENT_ID}
             client-secret: ${KAKAO_CLIENT_SECRET}
-            redirect-uri: ${SERVER_URL}/login/oauth2/code/kakao
+            redirect-uri: ${SERVER_URL}/api/login/oauth2/code/kakao
             authorization-grant-type: authorization_code
             client-authentication-method: client_secret_post
             scope: profile_nickname, profile_image
@@ -58,7 +61,7 @@ spring:
           naver:
             client-id: ${NAVER_CLIENT_ID}
             client-secret: ${NAVER_CLIENT_SECRET}
-            redirect-uri: ${SERVER_URL}/login/oauth2/code/naver
+            redirect-uri: ${SERVER_URL}/api/login/oauth2/code/naver
             authorization-grant-type: authorization_code
             scope: name, email, profile_image
             client-name: Naver
@@ -68,7 +71,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
-            redirect-uri: ${SERVER_URL}/login/oauth2/code/google
+            redirect-uri: ${SERVER_URL}/api/login/oauth2/code/google
             scope: profile, email
 
         # 👇 [핵심 2] 이 provider 섹션이 통째로 빠져 있었습니다!
@@ -102,3 +105,9 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-validity: 3600000      # 1시간
   refresh-token-validity: 1209600000  # 14일
+
+toss:
+  client-key: ${TOSS_CLIENT_KEY}
+  secret-key: ${TOSS_SECRET_KEY}
+  regular-client-key: ${TOSS_REGULAR_CLIENT_KEY}
+  regular-secret-key: ${TOSS_REGULAR_SECRET_KEY}
