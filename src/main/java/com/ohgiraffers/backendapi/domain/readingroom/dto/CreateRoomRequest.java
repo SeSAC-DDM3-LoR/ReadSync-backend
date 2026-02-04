@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 public class CreateRoomRequest {
     private Long libraryId;
     private String roomName;
-    private VoiceType voiceType = VoiceType.BASIC;
+    private VoiceType voiceType = VoiceType.SEONBI;
     private Integer maxCapacity = 8;
     private Integer currentChapterId = 1;
 }

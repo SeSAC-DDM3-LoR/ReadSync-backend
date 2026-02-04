@@ -9,4 +9,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface PaymentHistoryRepository extends JpaRepository<PaymentHistory, Long> {
+
+    java.util.Optional<PaymentHistory> findTopByOrderOrderByCreatedAtDesc(
+            com.ohgiraffers.backendapi.domain.order.entity.Order order);
 }

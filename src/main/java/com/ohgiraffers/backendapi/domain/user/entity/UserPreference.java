@@ -24,7 +24,7 @@ public class UserPreference extends BaseVectorEntity {
 
     // 1024차원 단기 취향 벡터 (DB의 real[] 또는 vector 타입에 매핑)
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Column(name = "short_term_vector", columnDefinition = "halfvec(1024)")
+    @Column(name = "short_term_vector", columnDefinition = "vector(1024)")
     private float[] shortTermVector;
 
     /**

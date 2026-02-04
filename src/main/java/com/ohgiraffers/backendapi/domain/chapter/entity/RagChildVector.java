@@ -24,8 +24,8 @@ public class RagChildVector {
     @JoinColumn(name = "parent_id", nullable = false)
     private RagParentDocument parent;
 
-    @Column(columnDefinition = "halfvec(1024)")
-    @org.hibernate.annotations.ColumnTransformer(write = "?::halfvec")
+    @Column(columnDefinition = "vector(1024)")
+    @org.hibernate.annotations.ColumnTransformer(write = "?::vector")
     @Convert(converter = com.ohgiraffers.backendapi.global.converter.VectorConverter.class)
     private List<Float> vector;
 

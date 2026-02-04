@@ -9,4 +9,9 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    org.springframework.data.domain.Page<Order> findByUser(com.ohgiraffers.backendapi.domain.user.entity.User user,
+            org.springframework.data.domain.Pageable pageable);
+
+    java.util.Optional<Order> findByOrderUid(String orderUid);
 }

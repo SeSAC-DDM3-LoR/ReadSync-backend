@@ -61,6 +61,7 @@ public class SecurityConfig {
 
                                 // 임시 모드 허용
                                 .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/v1/webhooks/**").permitAll()
                                                 .anyRequest().permitAll())
                                 .oauth2Login(oauth2 -> oauth2
                                                 .userInfoEndpoint(userInfo -> userInfo
