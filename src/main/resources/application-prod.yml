@@ -27,7 +27,7 @@ spring:
   jpa:
     hibernate:
 #      ddl-auto: update # 추후 validate로 변경 권장
-      ddl-auto: none
+      ddl-auto: update
 #      show-sql: true
     show-sql: false
     properties:
@@ -55,7 +55,7 @@ spring:
             client-authentication-method: client_secret_post
             scope: profile_nickname, profile_image
             client-name: Kakao
-            provider: kakao  # 👈 [핵심 1] 이 줄이 없어서 에러가 났습니다!
+            provider: kakao
 
           # --- 네이버 설정 ---
           naver:
@@ -65,7 +65,7 @@ spring:
             authorization-grant-type: authorization_code
             scope: name, email, profile_image
             client-name: Naver
-            provider: naver  # 👈 [핵심 1] 네이버도 이게 있어야 합니다.
+            provider: naver
 
           # --- 구글 설정 (구글은 provider 없어도 됨) ---
           google:
@@ -74,8 +74,7 @@ spring:
             redirect-uri: ${SERVER_URL}/api/login/oauth2/code/google
             scope: profile, email
 
-        # 👇 [핵심 2] 이 provider 섹션이 통째로 빠져 있었습니다!
-        # 스프링에게 카카오랑 네이버 주소를 알려주는 필수 설정입니다.
+        # --- Provider 설정 (필수!) ---
         provider:
           kakao:
             authorization-uri: https://kauth.kakao.com/oauth/authorize
