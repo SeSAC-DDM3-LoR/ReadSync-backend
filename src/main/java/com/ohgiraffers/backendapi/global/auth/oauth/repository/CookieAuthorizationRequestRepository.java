@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
@@ -64,13 +66,15 @@ public class CookieAuthorizationRequestRepository
         String serialized = serialize(authorizationRequest);
         log.debug("Serialized cookie value length: {}", serialized.length());
 
-        // 쿠키 생성 - SameSite=Lax 설정을 위해 헤더 직접 설정
-        String cookieValue = String.format(
-                "%s=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax",
-                OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME,
-                serialized,
-                COOKIE_EXPIRE_SECONDS);
-        response.addHeader("Set-Cookie", cookieValue);
+        ResponseCookie cookie = ResponseCookie.from(OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, serialized)
+                .path("/")
+                .httpOnly(true)
+                .secure(true) // HTTPS Required for SameSite=None
+                .sameSite("None")
+                .maxAge(COOKIE_EXPIRE_SECONDS)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         log.info("OAuth2 쿠키 저장 완료: state={}", authorizationRequest.getState());
     }
 
@@ -100,10 +104,14 @@ public class CookieAuthorizationRequestRepository
         if (cookies != null && cookies.length > 0) {
             for (Cookie cookie : cookies) {
                 if (name.equals(cookie.getName())) {
-                    cookie.setValue("");
-                    cookie.setPath("/");
-                    cookie.setMaxAge(0);
-                    response.addCookie(cookie);
+                    ResponseCookie deleteCookie = ResponseCookie.from(name, "")
+                            .path("/")
+                            .httpOnly(true)
+                            .secure(true)
+                            .sameSite("None")
+                            .maxAge(0)
+                            .build();
+                    response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
                 }
             }
         }
