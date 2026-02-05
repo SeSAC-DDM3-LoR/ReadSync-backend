@@ -7,6 +7,10 @@ server:
 file:
   upload-dir: ${FILE_UPLOAD_DIR:/tmp/uploads/}
 
+# Frontend URL for OAuth redirect
+frontend:
+  url: ${FRONTEND_URL:http://localhost:5173}
+
 spring:
   sql:
     init:
