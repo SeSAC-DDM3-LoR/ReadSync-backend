@@ -1,4 +1,9 @@
 spring:
   profiles:
-    active: prod
-    
+#    active: dev
+#    include: oauth
+     active: prod
+
+# 로컬 테스트용 frontend URL
+#frontend:
+#  url: http://localhost:5173
