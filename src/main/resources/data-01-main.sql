@@ -260,7 +260,7 @@ INSERT INTO "inquiries" ("title", "user_id", "content") VALUES
                                                             ('책 내용 오류 신고', 4, '오타를 발견했습니다.');
 
 -- [28] Inquiry Answers (문의 답변 - User(Admin), Inquiry 참조)
-INSERT INTO "inquiry_answers" ("content", "user_id", "inquiry_id") VALUES
+INSERT INTO "inquiry_answers" ("content", "admin_user_id", "inquiry_id") VALUES
                                                                        ('취소 처리 해드렸습니다.', 1, 1),
                                                                        ('임시 비밀번호를 발송했습니다.', 1, 2),
                                                                        ('소중한 제보 감사합니다.', 1, 3);

@@ -416,7 +416,7 @@ CREATE TABLE "orders" (
 CREATE TABLE "inquiry_answers" (
     "answer_id" BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
     "content" TEXT NOT NULL,
-    "user_id" BIGINT NOT NULL,
+    "admin_user_id" BIGINT NOT NULL,
     "inquiry_id" BIGINT NOT NULL,
     "updated_at" TIMESTAMP DEFAULT now() NOT NULL,
     "created_at" TIMESTAMP DEFAULT now() NOT NULL,
@@ -691,7 +691,7 @@ ALTER TABLE "orders" ADD CONSTRAINT "FK_payment_methods_TO_orders_1" FOREIGN KEY
 ALTER TABLE "orders" ADD CONSTRAINT "FK_subscriptions_TO_orders_1" FOREIGN KEY ("sub_id") REFERENCES "subscriptions" ("sub_id");
 ALTER TABLE "orders" ADD CONSTRAINT "FK_carts_TO_orders_1" FOREIGN KEY ("cart_id") REFERENCES "carts" ("cart_id");
 ALTER TABLE "subscriptions" ADD CONSTRAINT "FK_subscription_plans_TO_subscriptions_1" FOREIGN KEY ("plan_id") REFERENCES "subscription_plans" ("plan_id");
-ALTER TABLE "inquiry_answers" ADD CONSTRAINT "FK_users_TO_inquiry_answers_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
+ALTER TABLE "inquiry_answers" ADD CONSTRAINT "FK_users_TO_inquiry_answers_1" FOREIGN KEY ("admin_user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "inquiry_answers" ADD CONSTRAINT "FK_inquiries_TO_inquiry_answers_1" FOREIGN KEY ("inquiry_id") REFERENCES "inquiries" ("inquiry_id");
 ALTER TABLE "community_posts" ADD CONSTRAINT "FK_users_TO_community_posts_1" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 ALTER TABLE "book_logs" ADD CONSTRAINT "FK_Libraries_TO_book_logs_1" FOREIGN KEY ("library_id") REFERENCES "libraries" ("library_id");
