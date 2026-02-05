@@ -64,6 +64,8 @@ spring:
             client-name: Kakao
             provider: kakao
 
+            ## 커밋용 주석
+
           # --- 네이버 설정 ---
           naver:
             client-id: ${NAVER_CLIENT_ID}
