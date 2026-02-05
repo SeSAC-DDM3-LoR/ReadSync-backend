@@ -1,5 +1,7 @@
 package com.ohgiraffers.backendapi.global.auth.oauth.repository;
 
+import lombok.extern.slf4j.Slf4j;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +16,7 @@ import java.util.Base64;
  * Cookie 기반 OAuth2 Authorization Request 저장소
  * STATELESS 세션 정책에서 OAuth2 state를 유지하기 위해 사용
  */
+@Slf4j
 @Component
 public class CookieAuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
@@ -23,9 +26,23 @@ public class CookieAuthorizationRequestRepository
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-        return getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
+        log.debug("OAuth2 Authorization Request 로드 시도");
+        OAuth2AuthorizationRequest authRequest = getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
                 .map(this::deserialize)
                 .orElse(null);
+
+        if (authRequest != null) {
+            log.debug("Found Authorization Request in Cookie: state={}", authRequest.getState());
+        } else {
+            log.debug("Authorization Request Cookie not found or empty. Cookies: {}",
+                    request.getCookies() != null ? request.getCookies().length : 0);
+            if (request.getCookies() != null) {
+                for (Cookie c : request.getCookies()) {
+                    log.debug("Cookie: name={}, value={}", c.getName(), c.getValue());
+                }
+            }
+        }
+        return authRequest;
     }
 
     @Override
@@ -33,10 +50,12 @@ public class CookieAuthorizationRequestRepository
             HttpServletRequest request,
             HttpServletResponse response) {
         if (authorizationRequest == null) {
+            log.debug("Authorization Request is null. Deleting cookie.");
             deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
             return;
         }
 
+        log.debug("Saving Authorization Request to Cookie. state={}", authorizationRequest.getState());
         Cookie cookie = new Cookie(OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, serialize(authorizationRequest));
         cookie.setPath("/");
         cookie.setHttpOnly(true);
@@ -47,6 +66,7 @@ public class CookieAuthorizationRequestRepository
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request,
             HttpServletResponse response) {
+        log.debug("Removing Authorization Request Cookie");
         OAuth2AuthorizationRequest authorizationRequest = loadAuthorizationRequest(request);
         deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
         return authorizationRequest;
