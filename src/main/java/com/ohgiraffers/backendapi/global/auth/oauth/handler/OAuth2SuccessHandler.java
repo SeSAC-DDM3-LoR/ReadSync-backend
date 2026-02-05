@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -27,6 +28,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         private final JwtTokenProvider jwtTokenProvider;
         private final UserRepository userRepository;
         private final RefreshTokenRepository refreshTokenRepository;
+
+        @Value("${frontend.url}")
+        private String frontendUrl;
 
         @Override
         public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -65,7 +69,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 // isNewUser 판별: CustomOAuth2UserService에서 넣어준 attributes 확인
                 boolean isNewUser = Boolean.TRUE.equals(attributes.get("isNewUser"));
 
-                String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+                String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
                                 .queryParam("accessToken", accessToken)
                                 .queryParam("refreshToken", refreshToken)
                                 .queryParam("isNewUser", isNewUser)
