@@ -36,7 +36,7 @@ public class WebClientConfig {
     @Bean
     public WebClient embeddingServerWebClient(WebClient.Builder builder) {
         return builder
-                .baseUrl("http://localhost:8000") // 파이썬 임베딩 서버 주소
+                .baseUrl(aiServerUrl) // AI 서버 주소 환경 변수 사용
                 .defaultHeader("Content-Type", "application/json")
                 .build();
     }
