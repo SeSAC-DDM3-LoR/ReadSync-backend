@@ -47,7 +47,7 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         // 프론트엔드 콜백 페이지로 에러 파라미터와 함께 리다이렉트
         // 한글 메시지는 반드시 URL 인코딩 필요 (Tomcat 헤더 제약)
         String encodedErrorMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
-        
+
         String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
                 .queryParam("error", errorType)
                 .queryParam("errorMessage", encodedErrorMessage)
@@ -55,5 +55,4 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
-}
 }
