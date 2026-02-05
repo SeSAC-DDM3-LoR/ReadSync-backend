@@ -11,45 +11,39 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/community/comments")
+@RequestMapping("/community/comments")
 public class CommunityCommentController {
 
-    private final CommunityCommentService service;
+        private final CommunityCommentService service;
 
-    @PostMapping("/post/{postId}")
-    public ResponseEntity<CommunityCommentResponse> create(
-            @PathVariable Long postId,
-            @RequestBody CommunityCommentRequest.Create request
-    ) {
-        return ResponseEntity.ok(
-                CommunityCommentResponse.from(service.create(request, postId, 1L))
-        );
-    }
+        @PostMapping("/post/{postId}")
+        public ResponseEntity<CommunityCommentResponse> create(
+                        @PathVariable Long postId,
+                        @RequestBody CommunityCommentRequest.Create request) {
+                return ResponseEntity.ok(
+                                CommunityCommentResponse.from(service.create(request, postId, 1L)));
+        }
 
-    @GetMapping("/post/{postId}")
-    public ResponseEntity<List<CommunityCommentResponse>> findByPost(
-            @PathVariable Long postId
-    ) {
-        return ResponseEntity.ok(
-                service.findByPostId(postId).stream()
-                        .map(CommunityCommentResponse::from)
-                        .toList()
-        );
-    }
+        @GetMapping("/post/{postId}")
+        public ResponseEntity<List<CommunityCommentResponse>> findByPost(
+                        @PathVariable Long postId) {
+                return ResponseEntity.ok(
+                                service.findByPostId(postId).stream()
+                                                .map(CommunityCommentResponse::from)
+                                                .toList());
+        }
 
-    @PutMapping("/{commentId}")
-    public ResponseEntity<CommunityCommentResponse> update(
-            @PathVariable Long commentId,
-            @RequestBody CommunityCommentRequest.Update request
-    ) {
-        return ResponseEntity.ok(
-                CommunityCommentResponse.from(service.update(commentId, request))
-        );
-    }
+        @PutMapping("/{commentId}")
+        public ResponseEntity<CommunityCommentResponse> update(
+                        @PathVariable Long commentId,
+                        @RequestBody CommunityCommentRequest.Update request) {
+                return ResponseEntity.ok(
+                                CommunityCommentResponse.from(service.update(commentId, request)));
+        }
 
-    @DeleteMapping("/{commentId}")
-    public ResponseEntity<Void> delete(@PathVariable Long commentId) {
-        service.delete(commentId);
-        return ResponseEntity.noContent().build();
-    }
+        @DeleteMapping("/{commentId}")
+        public ResponseEntity<Void> delete(@PathVariable Long commentId) {
+                service.delete(commentId);
+                return ResponseEntity.noContent().build();
+        }
 }

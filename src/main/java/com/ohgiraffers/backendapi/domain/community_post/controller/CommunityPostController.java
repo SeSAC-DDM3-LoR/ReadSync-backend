@@ -11,25 +11,22 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/community/posts")
+@RequestMapping("/community/posts")
 public class CommunityPostController {
 
     private final CommunityPostService service;
 
     @PostMapping
     public ResponseEntity<CommunityPostResponse> create(
-            @RequestBody CommunityPostRequest.Create request
-    ) {
+            @RequestBody CommunityPostRequest.Create request) {
         return ResponseEntity.ok(
-                CommunityPostResponse.from(service.create(request, 1L))
-        );
+                CommunityPostResponse.from(service.create(request, 1L)));
     }
 
     @GetMapping("/{postId}")
     public ResponseEntity<CommunityPostResponse> find(@PathVariable Long postId) {
         return ResponseEntity.ok(
-                CommunityPostResponse.from(service.find(postId))
-        );
+                CommunityPostResponse.from(service.find(postId)));
     }
 
     @GetMapping
@@ -37,18 +34,15 @@ public class CommunityPostController {
         return ResponseEntity.ok(
                 service.findAll().stream()
                         .map(CommunityPostResponse::from)
-                        .toList()
-        );
+                        .toList());
     }
 
     @PutMapping("/{postId}")
     public ResponseEntity<CommunityPostResponse> update(
             @PathVariable Long postId,
-            @RequestBody CommunityPostRequest.Update request
-    ) {
+            @RequestBody CommunityPostRequest.Update request) {
         return ResponseEntity.ok(
-                CommunityPostResponse.from(service.update(postId, request))
-        );
+                CommunityPostResponse.from(service.update(postId, request)));
     }
 
     @DeleteMapping("/{postId}")
