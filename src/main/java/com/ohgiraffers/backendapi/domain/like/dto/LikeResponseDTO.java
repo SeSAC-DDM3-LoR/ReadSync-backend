@@ -13,6 +13,10 @@ public class LikeResponseDTO {
     private boolean isPressed;
     @Schema(description = "처리 메시지", example = "좋아요가 반영되었습니다.")
     private String message;
-    private Long totalLikes;
-    private Long totalDislikes;
+
+    @Schema(description = "좋아요 총 개수")
+    private Long likeCount;
+
+    @Schema(description = "싫어요 총 개수")
+    private Long dislikeCount;
 }
