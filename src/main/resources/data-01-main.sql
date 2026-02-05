@@ -40,7 +40,7 @@ INSERT INTO "exp_rules" ("activity_type", "exp", "category_id") VALUES
 -- [4] Users (사용자 기본 정보)
 -- ★★★ 수정됨: status 컬럼 추가 ('ACTIVE'로 초기화) ★★★
 INSERT INTO "users" ("role", "provider", "provider_id", "login_id", "password", "status","updated_at") VALUES
-                                                                                                           ('ADMIN', 'LOCAL', 'admin_01', 'admin', '$2a$10$u.wb6L3F2DUJLzJFN977w.x/YMvRsR2ocXIqOE3gRMt7MnggBtjTK', 'ACTIVE',now()),
+                                                                                                           ('ADMIN', 'LOCAL', 'admin_01', 'admin', '$2y$10$/Tu.stzMCsRBsZ8xjaBbdusOxIjdTyq22uN4KDDBqcamq99DSdVAC', 'ACTIVE',now()),
                                                                                                            ('USER', 'GOOGLE', 'google_123', 'user_a', '$2a$10$u.wb6L3F2DUJLzJFN977w.x/YMvRsR2ocXIqOE3gRMt7MnggBtjTK', 'ACTIVE',now()),
                                                                                                            ('USER', 'KAKAO', 'kakao_456', 'user_b', '$2a$10$u.wb6L3F2DUJLzJFN977w.x/YMvRsR2ocXIqOE3gRMt7MnggBtjTK', 'ACTIVE',now()),
                                                                                                            ('USER', 'NAVER', 'naver_789', 'user_c', '$2a$10$u.wb6L3F2DUJLzJFN977w.x/YMvRsR2ocXIqOE3gRMt7MnggBtjTK', 'ACTIVE',now());
