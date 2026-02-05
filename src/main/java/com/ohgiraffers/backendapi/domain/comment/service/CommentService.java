@@ -6,6 +6,8 @@ import com.ohgiraffers.backendapi.domain.comment.dto.CommentRequestDTO;
 import com.ohgiraffers.backendapi.domain.comment.dto.CommentResponseDTO;
 import com.ohgiraffers.backendapi.domain.comment.entity.Comment;
 import com.ohgiraffers.backendapi.domain.comment.repository.CommentRepository;
+import com.ohgiraffers.backendapi.domain.like.enums.LikeType;
+import com.ohgiraffers.backendapi.domain.like.repository.LikeRepository;
 import com.ohgiraffers.backendapi.domain.user.entity.User;
 import com.ohgiraffers.backendapi.domain.user.repository.UserRepository;
 import com.ohgiraffers.backendapi.global.common.enums.VisibilityStatus;
@@ -26,6 +28,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final ChapterRepository chapterRepository;
+    private final LikeRepository likeRepository;
 
     /* [1] 댓글 작성 (일반 + 대댓글) */
     @Transactional
@@ -161,6 +164,12 @@ public class CommentService {
     }
 
     private CommentResponseDTO toReponseDTO(Comment comment) {
+        // 좋아요/싫어요 카운트 집계
+        int likeCount = likeRepository.countByComment_CommentIdAndLikeType(
+                comment.getCommentId(), LikeType.LIKE).intValue();
+        int dislikeCount = likeRepository.countByComment_CommentIdAndLikeType(
+                comment.getCommentId(), LikeType.DISLIKE).intValue();
+
         return CommentResponseDTO.builder()
                 .commentId(comment.getCommentId())
                 .nickname(comment.getUser().getUserInformation().getNickname())
@@ -171,6 +180,10 @@ public class CommentService {
                 .isChanged(comment.isChanged())
                 .status(comment.getVisibilityStatus())
                 .createdAt(comment.getCreatedAt())
+                .changedAt(comment.getUpdatedAt())
+                .userId(comment.getUser().getId())
+                .likeCount(likeCount)
+                .dislikeCount(dislikeCount)
                 .build();
     }
 }
