@@ -4,16 +4,22 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
@@ -39,9 +45,12 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         }
 
         // 프론트엔드 콜백 페이지로 에러 파라미터와 함께 리다이렉트
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+        // 한글 메시지는 반드시 URL 인코딩 필요 (Tomcat 헤더 제약)
+        String encodedErrorMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
+
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
                 .queryParam("error", errorType)
-                .queryParam("errorMessage", errorMessage)
+                .queryParam("errorMessage", encodedErrorMessage)
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
