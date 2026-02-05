@@ -81,6 +81,9 @@ jobs:
           # 4. .ebextensions 폴더 복사 (Health Check 설정 포함)
           cp -r .ebextensions deploy/ || echo "⚠️ .ebextensions not found"
           
+          # 5. .platform 폴더 복사 (Nginx 설정 포함)
+          cp -r .platform deploy/ || echo "⚠️ .platform not found"
+          
           # 4. 압축 (반드시 deploy 폴더 안에서 실행하여 루트에 파일들이 위치하게 함)
           cd deploy
           zip -r ../deploy.zip .
