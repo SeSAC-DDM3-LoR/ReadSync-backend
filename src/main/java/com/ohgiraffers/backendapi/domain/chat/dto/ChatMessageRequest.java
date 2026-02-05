@@ -26,4 +26,7 @@ public class ChatMessageRequest {
 
     @Schema(description = "이미지 URL (텍스트 전송 시 null 가능)", example = "https://s3.aws.com/...")
     private String imageUrl;
+
+    @Schema(description = "이미지 파일 (직접 업로드 시 사용, imageUrl과 배타적)")
+    private org.springframework.web.multipart.MultipartFile imageFile;
 }

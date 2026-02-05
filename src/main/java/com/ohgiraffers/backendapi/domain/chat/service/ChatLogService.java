@@ -39,6 +39,9 @@ public class ChatLogService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // S3 Image Upload
+    private final com.ohgiraffers.backendapi.global.service.ImageUploadService imageUploadService;
+
     // 메시지 전송(DB 저장 -> Redis 채널에 뿌리기)
     @Transactional
     public void sendMessage(Long userId, ChatMessageRequest request) {
@@ -63,10 +66,21 @@ public class ChatLogService {
             throw new CustomException(ErrorCode.ROOM_FINISHED);
         }
 
-        // 1. DB 저장 (기존 로직 유지)
+        // 1. 이미지 파일 처리 (S3 업로드)
+        String finalImageUrl = null;
+        if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
+            // 파일 직접 업로드
+            finalImageUrl = imageUploadService.uploadChatImage(request.getImageFile(), request.getRoomId());
+            log.info("Image uploaded to S3: {}", finalImageUrl);
+        } else if (request.getImageUrl() != null) {
+            // URL 직접 사용 (기존 로직 유지)
+            finalImageUrl = request.getImageUrl();
+        }
+
+        // 2. DB 저장
         ChatLog chatLog;
-        if (request.getImageUrl() != null) {
-            chatLog = ChatLog.createImageMessage(readingRoom, user, request.getImageUrl());
+        if (finalImageUrl != null) {
+            chatLog = ChatLog.createImageMessage(readingRoom, user, finalImageUrl);
         } else {
             chatLog = ChatLog.createTextMessage(readingRoom, user, request.getContent());
         }
