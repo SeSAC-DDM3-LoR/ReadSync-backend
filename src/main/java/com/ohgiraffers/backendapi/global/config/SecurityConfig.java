@@ -20,7 +20,7 @@ import com.ohgiraffers.backendapi.global.auth.oauth.service.CustomOAuth2UserServ
 import com.ohgiraffers.backendapi.global.auth.oauth.handler.OAuth2SuccessHandler;
 import com.ohgiraffers.backendapi.global.auth.oauth.handler.OAuth2FailureHandler;
 import org.springframework.web.accept.ContentNegotiationManager;
-import com.ohgiraffers.backendapi.global.auth.oauth.repository.CookieAuthorizationRequestRepository;
+// CookieAuthorizationRequestRepository removed - using default session-based repository
 
 @Configuration
 @EnableWebSecurity
@@ -32,7 +32,7 @@ public class SecurityConfig {
         private final CustomOAuth2UserService customOAuth2UserService;
         private final OAuth2SuccessHandler oAuth2SuccessHandler;
         private final OAuth2FailureHandler oAuth2FailureHandler;
-        private final CookieAuthorizationRequestRepository cookieAuthorizationRequestRepository;
+        // OAuth2 state is now stored in session (IF_REQUIRED policy)
 
         @Bean
         public PasswordEncoder passwordEncoder() {
@@ -47,7 +47,7 @@ public class SecurityConfig {
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .formLogin(AbstractHttpConfigurer::disable)
                                 .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
                                 /*
                                  * .authorizeHttpRequests(auth -> auth
@@ -67,9 +67,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/v1/webhooks/**").permitAll()
                                                 .anyRequest().permitAll())
                                 .oauth2Login(oauth2 -> oauth2
-                                                .authorizationEndpoint(authorization -> authorization
-                                                                .authorizationRequestRepository(
-                                                                                cookieAuthorizationRequestRepository))
+                                                // Using default session-based authorization request repository
                                                 .userInfoEndpoint(userInfo -> userInfo
                                                                 .userService(customOAuth2UserService))
                                                 .successHandler(oAuth2SuccessHandler)
