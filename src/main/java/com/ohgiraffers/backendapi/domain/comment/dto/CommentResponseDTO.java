@@ -38,4 +38,13 @@ public class CommentResponseDTO {
 
     private LocalDateTime changedAt;
 
+    @Schema(description = "작성자 ID (삭제 권한 확인용)")
+    private Long userId;
+
+    @Schema(description = "좋아요 개수")
+    private int likeCount;
+
+    @Schema(description = "싫어요 개수")
+    private int dislikeCount;
+
 }

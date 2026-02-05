@@ -52,7 +52,7 @@ public class LikeService {
             // [A] 이미 Like 기록이 존재하는 경우
             Like like = existingLike.get();
 
-            if(like.getLikeType() == requestType) {
+            if (like.getLikeType() == requestType) {
                 // [A-1] 좋아요 상태에서 좋아요 클릭(중복 클릭) -> 좋아요 취소
                 likeRepository.delete(like);
                 isPressed = false;
@@ -96,7 +96,7 @@ public class LikeService {
             // [A] 이미 Like 기록이 존재하는 경우
             Like like = existingLike.get();
 
-            if(like.getLikeType() == requestType) {
+            if (like.getLikeType() == requestType) {
                 // [A-1] 좋아요 상태에서 좋아요 클릭(중복 클릭) -> 좋아요 취소
                 likeRepository.delete(like);
                 isPressed = false;
@@ -115,14 +115,13 @@ public class LikeService {
         }
 
         // 최신 집계 반환(좋아요 반영/해제 여부, 어떤것이 반영되었는지, 좋아요 합계, 싫어요 합계)
-        // ※현재는 댓글 전체를 count 하고 있으나, 나중에는 review나 comment의 entity에 카운트 +1/-1만 하는 기능을 추가하여 반정규화로 할것.
+        // ※현재는 댓글 전체를 count 하고 있으나, 나중에는 review나 comment의 entity에 카운트 +1/-1만 하는 기능을
+        // 추가하여 반정규화로 할것.
         // 그러면 성능상 이점이 있다고 함.
         return buildResponse(isPressed, message,
                 likeRepository.countByReview_ReviewIdAndLikeType(reviewId, LikeType.LIKE),
                 likeRepository.countByReview_ReviewIdAndLikeType(reviewId, LikeType.DISLIKE));
     }
-
-
 
     // ---------- Helper Method ----------
     private void saveCommentLike(User user, Comment comment, LikeType type) {
@@ -145,12 +144,12 @@ public class LikeService {
         likeRepository.save(newLike);
     }
 
-    private LikeResponseDTO buildResponse(boolean isPressed, String message, Long likes, Long dislikes) {
+    private LikeResponseDTO buildResponse(boolean isPressed, String message, Long likeCount, Long dislikeCount) {
         return LikeResponseDTO.builder()
                 .isPressed(isPressed)
                 .message(message)
-                .totalLikes(likes)
-                .totalDislikes(dislikes)
+                .likeCount(likeCount)
+                .dislikeCount(dislikeCount)
                 .build();
     }
 }
