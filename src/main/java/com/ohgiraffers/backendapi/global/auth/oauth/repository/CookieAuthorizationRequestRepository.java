@@ -26,21 +26,26 @@ public class CookieAuthorizationRequestRepository
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-        log.debug("OAuth2 Authorization Request 로드 시도");
+        log.info("OAuth2 Authorization Request 로드 시도 - URI: {}", request.getRequestURI());
+
+        // 모든 쿠키 로그
+        Cookie[] cookies = request.getCookies();
+        log.info("전체 쿠키 개수: {}", cookies != null ? cookies.length : 0);
+        if (cookies != null) {
+            for (Cookie c : cookies) {
+                log.info("  - 쿠키: name={}, valueLength={}", c.getName(),
+                        c.getValue() != null ? c.getValue().length() : 0);
+            }
+        }
+
         OAuth2AuthorizationRequest authRequest = getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
                 .map(this::deserialize)
                 .orElse(null);
 
         if (authRequest != null) {
-            log.debug("Found Authorization Request in Cookie: state={}", authRequest.getState());
+            log.info("OAuth2 쿠키에서 Authorization Request 찾음: state={}", authRequest.getState());
         } else {
-            log.debug("Authorization Request Cookie not found or empty. Cookies: {}",
-                    request.getCookies() != null ? request.getCookies().length : 0);
-            if (request.getCookies() != null) {
-                for (Cookie c : request.getCookies()) {
-                    log.debug("Cookie: name={}, value={}", c.getName(), c.getValue());
-                }
-            }
+            log.warn("OAuth2 Authorization Request 쿠키를 찾을 수 없음!");
         }
         return authRequest;
     }
@@ -55,12 +60,18 @@ public class CookieAuthorizationRequestRepository
             return;
         }
 
-        log.debug("Saving Authorization Request to Cookie. state={}", authorizationRequest.getState());
-        Cookie cookie = new Cookie(OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, serialize(authorizationRequest));
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(COOKIE_EXPIRE_SECONDS);
-        response.addCookie(cookie);
+        log.info("Saving Authorization Request to Cookie. state={}", authorizationRequest.getState());
+        String serialized = serialize(authorizationRequest);
+        log.debug("Serialized cookie value length: {}", serialized.length());
+
+        // 쿠키 생성 - SameSite=Lax 설정을 위해 헤더 직접 설정
+        String cookieValue = String.format(
+                "%s=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=Lax",
+                OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME,
+                serialized,
+                COOKIE_EXPIRE_SECONDS);
+        response.addHeader("Set-Cookie", cookieValue);
+        log.info("OAuth2 쿠키 저장 완료: state={}", authorizationRequest.getState());
     }
 
     @Override
