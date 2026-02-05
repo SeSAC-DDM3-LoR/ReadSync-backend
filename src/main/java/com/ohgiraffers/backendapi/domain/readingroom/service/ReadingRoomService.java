@@ -214,8 +214,9 @@ public class ReadingRoomService {
         try {
             String chapterId = "ch" + room.getCurrentChapterId();
             String paragraphId = "p" + (room.getLastReadPos() + 1); // 다음 문단
+            int voiceId = room.getVoiceType().getLuxiaVoiceId(); // VoiceType에서 Luxia Voice ID 가져오기
 
-            String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId)
+            String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId, voiceId)
                     .block(); // 동기 호출 (필요 시 비동기 처리 가능)
 
             // WebSocket으로 오디오 URL 전송
@@ -227,7 +228,7 @@ public class ReadingRoomService {
                             "chapterId", chapterId,
                             "paragraphId", paragraphId));
 
-            log.info("TTS audio URL sent to room {}: {}", roomId, audioUrl);
+            log.info("TTS audio URL sent to room {} (voice: {}): {}", roomId, room.getVoiceType(), audioUrl);
         } catch (Exception e) {
             log.error("Failed to get TTS audio URL for room {}", roomId, e);
             // TTS 실패해도 방 상태는 PLAYING으로 변경 (채팅은 가능하도록)
