@@ -1,5 +1,7 @@
 package com.ohgiraffers.backendapi.global.auth.oauth.repository;
 
+import lombok.extern.slf4j.Slf4j;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +16,7 @@ import java.util.Base64;
  * Cookie 기반 OAuth2 Authorization Request 저장소
  * STATELESS 세션 정책에서 OAuth2 state를 유지하기 위해 사용
  */
+@Slf4j
 @Component
 public class CookieAuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
