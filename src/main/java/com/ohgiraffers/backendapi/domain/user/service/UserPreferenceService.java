@@ -177,22 +177,47 @@ public class UserPreferenceService {
                 (currentAlphaLong == ALPHA_BOOST));
     }
 
-    // [New] 장르 기반 벡터 초기화 로직
+    // [New] 장르 기반 벡터 초기화 로직 (다중 장르 지원)
     private void initializeVectorFromGenre(User user, UserPreference pref) {
         try {
-            // UserInformation에서 선호 장르 가져오기
-            // user 객체 그래프 탐색 대신 안전하게 처리
-            if (user.getUserInformation() != null) {
-                String genre = user.getUserInformation().getPreferredGenre();
-                float[] genreVec = genreVectorCache.getGenreVector(genre);
+            if (user.getUserInformation() != null && user.getUserInformation().getPreferredGenre() != null) {
+                String genreStr = user.getUserInformation().getPreferredGenre();
+                String[] genres = genreStr.split(",");
 
-                if (genreVec != null) {
-                    log.info("✨ [UserInit] 유저({})의 초기 취향을 '{}' 장르 평균으로 설정합니다.", user.getUserInformation().getNickname(),
-                            genre);
-                    // 초기값 설정 (장기/단기 모두 동일하게 시작)
-                    pref.updateTaste(genreVec, genreVec);
+                float[] combinedVec = new float[1024];
+                int validCount = 0;
+
+                for (String g : genres) {
+                    String cleanGenre = g.trim();
+                    float[] vec = genreVectorCache.getGenreVector(cleanGenre);
+                    if (vec != null) {
+                        for (int i = 0; i < 1024; i++) {
+                            combinedVec[i] += vec[i];
+                        }
+                        validCount++;
+                    }
+                }
+
+                if (validCount > 0) {
+                    // 평균 계산 및 정규화
+                    float sumSq = 0;
+                    for (int i = 0; i < 1024; i++) {
+                        combinedVec[i] /= validCount;
+                        sumSq += combinedVec[i] * combinedVec[i];
+                    }
+
+                    // L2 Normalize
+                    float norm = (float) Math.sqrt(sumSq);
+                    if (norm > 1e-9) {
+                        for (int i = 0; i < 1024; i++)
+                            combinedVec[i] /= norm;
+                    }
+
+                    log.info("✨ [UserInit] 유저({})의 초기 취향을 '{}' 장르들의 평균으로 설정합니다.",
+                            user.getUserInformation().getNickname(), genreStr);
+                    pref.updateTaste(combinedVec, combinedVec);
                 } else {
-                    log.debug("   [UserInit] '{}' 장르 벡터가 캐시에 없어 기본 0 벡터로 시작합니다.", genre);
+                    log.debug("   [UserInit] '{}' 장르 벡터가 캐시에 없어 기본 0 벡터로 시작합니다.", genreStr);
                 }
             }
         } catch (Exception e) {
