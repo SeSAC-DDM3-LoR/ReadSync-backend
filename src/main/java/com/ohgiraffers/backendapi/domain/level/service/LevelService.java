@@ -130,6 +130,30 @@ public class LevelService {
         }
 
         /**
+         * 유저의 경험치에 맞게 레벨을 동기화 (불일치 자동 보정)
+         * 로그인 시 호출하여 경험치-레벨 불일치 문제 해결
+         */
+        @Transactional
+        public void syncUserLevel(Long userId) {
+                UserInformation userInfo = userInformationRepository.findByUserId(userId)
+                                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다: " + userId));
+
+                int totalExp = userInfo.getExperience();
+                Long currentLevelId = userInfo.getLevelId();
+
+                // 현재 경험치에 맞는 올바른 레벨 계산
+                Level correctLevel = levelRepository.findMaxLevelByExperience(totalExp)
+                                .orElse(null);
+
+                if (correctLevel != null && !correctLevel.getId().equals(currentLevelId)) {
+                        // 레벨 불일치 -> 보정
+                        log.info("유저 {} 레벨 동기화: {} -> {} (경험치: {})",
+                                        userId, currentLevelId, correctLevel.getId(), totalExp);
+                        userInfo.levelUp(correctLevel.getId());
+                }
+        }
+
+        /**
          * 유저가 다음 레벨까지 필요한 경험치 계산
          */
         public Integer getExpToNextLevel(Long userId) {

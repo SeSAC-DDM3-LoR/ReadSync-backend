@@ -1,5 +1,6 @@
 package com.ohgiraffers.backendapi.domain.user.service;
 
+import com.ohgiraffers.backendapi.domain.level.service.LevelService;
 import com.ohgiraffers.backendapi.domain.user.dto.UserRequest;
 import com.ohgiraffers.backendapi.domain.user.dto.UserResponse;
 import com.ohgiraffers.backendapi.domain.user.entity.RefreshToken;
@@ -34,6 +35,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final LevelService levelService;
 
     // Redis 템플릿 주입 (RedisConfig에서 설정한 이름과 타입 일치)
     private final RedisTemplate<String, Object> redisTemplate;
@@ -43,8 +45,7 @@ public class AuthService {
     public UserResponse.UserLoginResponse socialLogin(UserRequest.Join request) {
         User user = userRepository.findByProviderAndProviderId(
                 SocialProvider.valueOf(request.getProvider().toUpperCase()),
-                request.getProviderId()
-        ).orElseGet(() -> register(request));
+                request.getProviderId()).orElseGet(() -> register(request));
 
         if (user.getStatus() == UserStatus.WITHDRAWN) {
             throw new CustomException(ErrorCode.LOGIN_FAILED);
@@ -140,6 +141,9 @@ public class AuthService {
             throw new CustomException(ErrorCode.LOGIN_FAILED);
         }
 
+        // 로그인 시 경험치-레벨 불일치 자동 보정
+        levelService.syncUserLevel(user.getId());
+
         return issueTokens(user);
     }
 
@@ -176,12 +180,11 @@ public class AuthService {
         // DB에서 리프레시 토큰 삭제
         refreshTokenRepository.deleteByUserId(userId);
 
-        //  로그아웃 시에도 소켓 끊으라고 신호 보냄
+        // 로그아웃 시에도 소켓 끊으라고 신호 보냄
         publishKickEvent(userId);
     }
 
-
-    //  토큰 발급 공통 로직 + 킥 이벤트 발행
+    // 토큰 발급 공통 로직 + 킥 이벤트 발행
     private UserResponse.UserLoginResponse issueTokens(User user) {
 
         publishKickEvent(user.getId());
@@ -196,9 +199,7 @@ public class AuthService {
                                 RefreshToken.builder()
                                         .userId(user.getId())
                                         .token(refreshToken)
-                                        .build()
-                        )
-                );
+                                        .build()));
 
         return UserResponse.UserLoginResponse.of(accessToken, refreshToken, user, user.getUserInformation());
     }
