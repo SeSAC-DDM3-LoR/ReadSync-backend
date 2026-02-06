@@ -16,7 +16,8 @@ public enum VoiceType {
     BORAM(2, "따뜻한 여성 목소리"),
     YUNA(5, "밝은 여성 목소리"),
     KYEON(7, "지적인 남성 목소리"),
-    BITNA(8, "청량한 여성 목소리");
+    BITNA(8, "청량한 여성 목소리"),
+    BASIC(76, "기본 목소리 (선비)"); // 호환성 유지를 위한 추가
 
     private final int luxiaVoiceId;
     private final String description;
