@@ -191,6 +191,45 @@ public class ChapterService {
     }
 
     /**
+     * 특정 문단의 텍스트 내용만 추출
+     */
+    public String getParagraphText(Long chapterId, String paragraphId) {
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAPTER_NOT_FOUND));
+
+        JsonNode contentNode = readFileToJsonNode(chapter.getBookContentPath());
+        if (contentNode == null)
+            return "";
+
+        // 배열인 경우 직접 순회
+        if (contentNode.isArray()) {
+            for (JsonNode node : contentNode) {
+                if (node.has("id") && node.get("id").asText().equals(paragraphId)) {
+                    return node.has("text") ? node.get("text").asText() : "";
+                }
+            }
+        }
+        // 객체인 경우 (content 또는 paragraphs 필드 확인)
+        else if (contentNode.isObject()) {
+            JsonNode arrayNode = null;
+            if (contentNode.has("content") && contentNode.get("content").isArray()) {
+                arrayNode = contentNode.get("content");
+            } else if (contentNode.has("paragraphs") && contentNode.get("paragraphs").isArray()) {
+                arrayNode = contentNode.get("paragraphs");
+            }
+
+            if (arrayNode != null) {
+                for (JsonNode node : arrayNode) {
+                    if (node.has("id") && node.get("id").asText().equals(paragraphId)) {
+                        return node.has("text") ? node.get("text").asText() : "";
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    /**
      * 챕터 URL 조회
      * 
      * 파일 내용을 읽지 않고 저장된 경로(URL)만 포함하여 반환합니다.

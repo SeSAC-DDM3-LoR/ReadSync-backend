@@ -13,41 +13,47 @@ import reactor.core.publisher.Mono;
 @Component
 public class TtsClient {
 
-    private final WebClient webClient;
+        private final WebClient webClient;
 
-    public TtsClient(@Value("${ai.server.url:http://localhost:8000}") String aiServerUrl) {
-        this.webClient = WebClient.builder()
-                .baseUrl(aiServerUrl)
-                .build();
-    }
+        public TtsClient(@Value("${ai.server.url:http://localhost:8000}") String aiServerUrl) {
+                this.webClient = WebClient.builder()
+                                .baseUrl(aiServerUrl)
+                                .build();
+        }
 
-    /**
-     * AI 서버에서 TTS 오디오 URL 가져오기
-     * 
-     * @param chapterId   챕터 ID (예: "ch4") - 현재는 사용하지 않음
-     * @param paragraphId 문단 ID (예: "p1")
-     * @param voiceId     Luxia Voice ID (예: 76, 2, 5, 7, 8)
-     * @return S3 presigned URL
-     */
-    public Mono<String> getAudioUrl(String chapterId, String paragraphId, int voiceId) {
-        log.info("Requesting TTS audio URL from AI server: chapterId={}, paragraphId={}, voiceId={}", 
-                chapterId, paragraphId, voiceId);
+        /**
+         * AI 서버에서 TTS 오디오 URL 가져오기
+         * 
+         * @param chapterId   챕터 ID
+         * @param paragraphId 문단 ID
+         * @param voiceId     Luxia Voice ID
+         * @param text        TTS 변환할 텍스트 내용
+         * @return S3 presigned URL
+         */
+        public Mono<String> getAudioUrl(String chapterId, String paragraphId, int voiceId, String text) {
+                log.info("Requesting TTS audio URL from AI server: pId={}, voice={}, textLen={}",
+                                paragraphId, voiceId, text != null ? text.length() : 0);
 
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/v1/soy-test/play/{paragraphId}")
-                        .queryParam("voice_id", voiceId)
-                        .build(paragraphId))
-                .retrieve()
-                .bodyToMono(TtsResponse.class)
-                .map(response -> response.url())
-                .doOnSuccess(url -> log.info("Received audio URL: {}", url))
-                .doOnError(error -> log.error("Failed to get audio URL from AI server", error));
-    }
+                // Request Body 객체 생성
+                java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
+                requestBody.put("text", text);
+                requestBody.put("voice_id", voiceId);
 
-    /**
-     * TTS API 응답 DTO
-     */
-    public record TtsResponse(String url, String paragraph_id) {
-    }
+                return webClient.post()
+                                .uri(uriBuilder -> uriBuilder
+                                                .path("/api/v1/soy-test/play/{paragraphId}")
+                                                .build(paragraphId))
+                                .bodyValue(requestBody)
+                                .retrieve()
+                                .bodyToMono(TtsResponse.class)
+                                .map(response -> response.url())
+                                .doOnSuccess(url -> log.info("Received audio URL: {}", url))
+                                .doOnError(error -> log.error("Failed to get audio URL from AI server", error));
+        }
+
+        /**
+         * TTS API 응답 DTO
+         */
+        public record TtsResponse(String url, String paragraph_id) {
+        }
 }

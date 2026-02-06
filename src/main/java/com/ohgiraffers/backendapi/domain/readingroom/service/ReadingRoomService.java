@@ -46,6 +46,7 @@ public class ReadingRoomService {
     private final UserRepository userRepository;
     private final LibraryRepository libraryRepository;
     private final ChapterRepository chapterRepository;
+    private final com.ohgiraffers.backendapi.domain.chapter.service.ChapterService chapterService;
     private final ExpLogService expLogService;
     private final UserStatusService userStatusService;
     private final ApplicationEventPublisher publisher;
@@ -227,7 +228,14 @@ public class ReadingRoomService {
             String paragraphId = "p" + (room.getLastReadPos() + 1); // 다음 문단
             int voiceId = room.getVoiceType().getLuxiaVoiceId(); // VoiceType에서 Luxia Voice ID 가져오기
 
-            String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId, voiceId)
+            // 텍스트 내용 추출
+            String text = chapterService.getParagraphText(room.getCurrentChapterId().longValue(), paragraphId);
+            if (text == null || text.isEmpty()) {
+                log.warn("Text not found for paragraphId: {}", paragraphId);
+                text = "내용을 찾을 수 없습니다."; // 기본 멘트
+            }
+
+            String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId, voiceId, text)
                     .block(); // 동기 호출 (필요 시 비동기 처리 가능)
 
             // WebSocket으로 오디오 URL 전송
