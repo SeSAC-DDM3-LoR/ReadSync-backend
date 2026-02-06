@@ -161,8 +161,6 @@ public class ChapterService {
                 : "Untitled Chapter";
         Integer finalParagraphs = requestDTO.getParagraphs() != null ? requestDTO.getParagraphs() : -1;
 
-
-
         // 4. 엔티티 생성 및 저장
         Chapter chapter = Chapter.builder()
                 .book(book)
@@ -263,12 +261,12 @@ public class ChapterService {
 
             // 파일이 변경되었고 paragraphs 정보가 있다면 업데이트
             if (requestDTO.getParagraphs() != null) {
-//                chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
+                // chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
                 chapter.updateParagraphs(requestDTO.getParagraphs());
             }
         } else if (requestDTO.getParagraphs() != null) {
             // 파일 변경 없어도 paragraphs 수동 수정 가능
-//            chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
+            // chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
             chapter.updateParagraphs(requestDTO.getParagraphs());
         }
 
@@ -293,7 +291,7 @@ public class ChapterService {
         chapter.updateMetadata(requestDTO.getChapterName(), requestDTO.getSequence());
 
         // 3. 문단 개수 수정
-//        chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
+        // chapter.getBook().adjustTotalParagraphs(requestDTO.getParagraphs());
         chapter.updateParagraphs(requestDTO.getParagraphs());
 
         // 4. 변경사항 저장
@@ -370,11 +368,12 @@ public class ChapterService {
 
     // 저장된 파일 경로에서 JSON Node 읽기 (로컬 파일 또는 외부 URL)
     private JsonNode readFileToJsonNode(String filePath) {
-        // [Optimized] AWS S3 URL인 경우 백엔드에서 다운로드하지 않고 건너뜀 (프론트엔드 직접 다운로드 유도)
-        if (filePath != null && filePath.contains("amazonaws.com")) {
-            log.info("S3 URL 접근 감지 - 백엔드 다운로드 스킵: {}", filePath);
-            return null;
-        }
+        // [Optimized] AWS S3 URL인 경우 백엔드에서 다운로드하지 않고 건너뜀 (프론트엔드 직접 다운로드 유도) -> 수정:
+        // 백엔드에서 다운로드해서 내려줌
+        // if (filePath != null && filePath.contains("amazonaws.com")) {
+        // log.info("S3 URL 접근 감지 - 백엔드 다운로드 스킵: {}", filePath);
+        // return null;
+        // }
 
         // HTTP URL인 경우 (Google Drive 등)
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
