@@ -177,11 +177,9 @@ public class AuthService {
     // 6. 로그아웃
     @Transactional
     public void logout(Long userId) {
-        // DB에서 리프레시 토큰 삭제
+        // DB에서 리프레시 토큰 삭제만 수행
+        // 다른 기기 킥은 "새 로그인" 시에만 발생해야 함
         refreshTokenRepository.deleteByUserId(userId);
-
-        // 로그아웃 시에도 소켓 끊으라고 신호 보냄
-        publishKickEvent(userId);
     }
 
     // 토큰 발급 공통 로직 + 킥 이벤트 발행
