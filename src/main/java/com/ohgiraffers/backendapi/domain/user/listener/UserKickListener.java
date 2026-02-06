@@ -32,15 +32,14 @@ public class UserKickListener implements MessageListener {
 
             Long userId = Long.parseLong(userIdStr);
 
-            // 해당 유저에게 강제 로그아웃 메시지 전송
-            // 프론트엔드는 /user/queue/kick 을 구독하고 있어야 함
             KickMessage kickMessage = new KickMessage(
                     "FORCE_LOGOUT",
                     "다른 기기에서 로그인하여 현재 세션이 종료됩니다.");
 
-            messagingTemplate.convertAndSendToUser(
-                    String.valueOf(userId),
-                    "/queue/kick",
+            // 해당 유저에게 강제 로그아웃 메시지 전송
+            // /queue 대신 /topic 사용하여 Principal 의존성 제거
+            messagingTemplate.convertAndSend(
+                    "/topic/user-kick/" + userId,
                     kickMessage);
 
             log.info("Kick message sent to user: {}", userId);
