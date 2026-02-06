@@ -3,6 +3,8 @@ package com.ohgiraffers.backendapi.domain.readingroom.service;
 import com.ohgiraffers.backendapi.domain.exp.dto.ExpLogRequestDTO;
 import com.ohgiraffers.backendapi.domain.exp.enums.ActivityType;
 import com.ohgiraffers.backendapi.domain.exp.service.ExpLogService;
+import com.ohgiraffers.backendapi.domain.chapter.entity.Chapter;
+import com.ohgiraffers.backendapi.domain.chapter.repository.ChapterRepository;
 import com.ohgiraffers.backendapi.domain.library.entity.Library;
 import com.ohgiraffers.backendapi.domain.library.repository.LibraryRepository;
 import com.ohgiraffers.backendapi.domain.readingroom.dto.CreateRoomRequest;
@@ -43,6 +45,7 @@ public class ReadingRoomService {
     private final RoomParticipantRepository roomParticipantRepository;
     private final UserRepository userRepository;
     private final LibraryRepository libraryRepository;
+    private final ChapterRepository chapterRepository;
     private final ExpLogService expLogService;
     private final UserStatusService userStatusService;
     private final ApplicationEventPublisher publisher;
@@ -70,13 +73,18 @@ public class ReadingRoomService {
             }
         }
 
+        // 해당 책의 첫 번째 챕터 ID 가져오기
+        Long bookId = library.getBook().getBookId();
+        List<Chapter> chapters = chapterRepository.findByBook_BookIdOrderBySequenceAsc(bookId);
+        Integer firstChapterId = chapters.isEmpty() ? 1 : chapters.get(0).getChapterId().intValue();
+
         ReadingRoom room = ReadingRoom.builder()
                 .host(host)
                 .library(library)
                 .roomName(roomName)
                 .voiceType(roomRequest.getVoiceType())
                 .maxCapacity(roomRequest.getMaxCapacity())
-                .currentChapterId(roomRequest.getCurrentChapterId())
+                .currentChapterId(firstChapterId) // 실제 첫 챕터 ID 사용
                 .build();
 
         ReadingRoom savedRoom = readingRoomRepository.save(room);
@@ -332,9 +340,8 @@ public class ReadingRoomService {
      * 전체 활성화된 독서룸 목록 조회
      */
     public List<com.ohgiraffers.backendapi.domain.readingroom.dto.ReadingRoomResponse> getAllActiveRooms() {
-        List<ReadingRoom> rooms = readingRoomRepository.findAll().stream()
-                .filter(room -> room.getStatus() != RoomStatus.FINISHED)
-                .toList();
+        // Fetch Join으로 연관 엔티티 한번에 로딩 (N+1 문제 및 LazyLoading 에러 해결)
+        List<ReadingRoom> rooms = readingRoomRepository.findAllActiveWithFetchJoin(RoomStatus.FINISHED);
 
         return rooms.stream()
                 .map(room -> {

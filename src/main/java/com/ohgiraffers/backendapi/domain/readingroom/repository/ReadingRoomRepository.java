@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,4 +22,13 @@ public interface ReadingRoomRepository extends JpaRepository<ReadingRoom, Long> 
 
     // 방장이 현재 운영 중인 방이 있는지 확인 (중복 방 생성 방지용)
     Optional<ReadingRoom> findByHost_IdAndStatusNot(Long hostId, RoomStatus status);
+
+    // [추가] 활성화된 모든 방 조회 (Fetch Join으로 N+1 문제 해결)
+    @Query("SELECT r FROM ReadingRoom r " +
+            "JOIN FETCH r.host h " +
+            "JOIN FETCH h.userInformation " +
+            "JOIN FETCH r.library l " +
+            "JOIN FETCH l.book " +
+            "WHERE r.status <> :excludeStatus AND r.deletedAt IS NULL")
+    List<ReadingRoom> findAllActiveWithFetchJoin(@Param("excludeStatus") RoomStatus excludeStatus);
 }
