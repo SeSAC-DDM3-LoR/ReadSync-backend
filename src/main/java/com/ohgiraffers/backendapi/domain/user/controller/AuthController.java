@@ -39,12 +39,11 @@ public class AuthController {
         UserResponse.UserLoginResponse response = authService.createAdmin(
                 request.getLoginId(),
                 request.getPassword(),
-                request.getNickname()
-        );
+                request.getNickname());
         return ResponseEntity.ok(response);
     }
 
-    //  관리자 로그인
+    // 관리자 로그인
     @PostMapping("/login")
     @Operation(summary = "일반/관리자 로그인")
     public ResponseEntity<UserResponse.UserLoginResponse> login(@RequestBody UserRequest.Login request) {
@@ -77,6 +76,15 @@ public class AuthController {
         authService.logout(userId);
 
         return ResponseEntity.ok("로그아웃 되었습니다.");
+    }
+
+    @PostMapping("/verify-password")
+    @Operation(summary = "비밀번호 검증", description = "중요 작업(회원탈퇴 등) 전 비밀번호를 검증합니다.")
+    public ResponseEntity<Boolean> verifyPassword(@CurrentUserId Long userId,
+            @RequestBody java.util.Map<String, String> request) {
+        String password = request.get("password");
+        boolean isValid = authService.verifyPassword(userId, password);
+        return ResponseEntity.ok(isValid);
     }
 
 }

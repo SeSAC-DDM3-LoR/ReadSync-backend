@@ -147,6 +147,20 @@ public class AuthService {
         return issueTokens(user);
     }
 
+    // 비밀번호 검증 (회원탈퇴 등 중요 작업 전)
+    @Transactional(readOnly = true)
+    public boolean verifyPassword(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 소셜 로그인 유저는 비밀번호가 없음 -> 검증 불가 (Front에서 처리)
+        if (user.getProvider() != SocialProvider.LOCAL) {
+            return false;
+        }
+
+        return passwordEncoder.matches(password, user.getPassword());
+    }
+
     // 5. 토큰 재발급
     @Transactional
     public TokenResponseDto reissue(String refreshToken) {

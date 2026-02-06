@@ -88,11 +88,16 @@ public class UserService {
     // 3. 회원 탈퇴
     @Transactional
     public void withdraw(Long userId) {
-        // 리프레시 토큰 삭제
-        refreshTokenRepository.deleteByUserId(userId);
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // [New] 관리자 계정 탈퇴 방지
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new CustomException(ErrorCode.NO_AUTHORITY_TO_UPDATE, "관리자 계정은 탈퇴할 수 없습니다.");
+        }
+
+        // 리프레시 토큰 삭제
+        refreshTokenRepository.deleteByUserId(userId);
 
         // User 엔티티의 delete 호출 (Soft Delete 적용됨)
         user.delete();
