@@ -205,15 +205,6 @@ public class ReadingRoomService {
         }
     }
 
-    // 재생속도 변경
-    @Transactional
-    public void updatePlaySpeed(Long roomId, Long hostId, BigDecimal speed) {
-        ReadingRoom room = getRoom(roomId);
-        validateHost(room, hostId);
-
-        room.changePlaySpeed(speed);
-    }
-
     // 재생 시작
     @Transactional
     public void startReading(Long roomId, Long hostId) {
@@ -314,6 +305,41 @@ public class ReadingRoomService {
             notifyRoomStatusChange(roomId, RoomStatus.PAUSED);
         } else {
             throw new CustomException(ErrorCode.INVALID_REQUEST_STATUS, "재생 중이거나 일시정지 상태에서만 사용 가능합니다.");
+        }
+    }
+
+    // 재생 속도 변경
+    @Transactional
+    public void updatePlaySpeed(Long roomId, Long hostId, java.math.BigDecimal speed) {
+        ReadingRoom room = getRoom(roomId);
+        validateHost(room, hostId);
+        room.changePlaySpeed(speed);
+
+        notifyRoomSettingsChange(roomId, "SPEED", speed.toString());
+    }
+
+    // 목소리 변경
+    @Transactional
+    public void updateVoiceType(Long roomId, Long hostId,
+            com.ohgiraffers.backendapi.domain.readingroom.enums.VoiceType voiceType) {
+        ReadingRoom room = getRoom(roomId);
+        validateHost(room, hostId);
+        room.setVoiceType(voiceType);
+
+        notifyRoomSettingsChange(roomId, "VOICE", voiceType.name());
+    }
+
+    // 설정 변경 알림
+    private void notifyRoomSettingsChange(Long roomId, String setting, String value) {
+        try {
+            java.util.Map<String, Object> message = new java.util.HashMap<>();
+            message.put("type", "SETTINGS_UPDATE");
+            message.put("roomId", roomId);
+            message.put("setting", setting);
+            message.put("value", value);
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/status", message);
+        } catch (Exception e) {
+            log.error("Failed to send settings update", e);
         }
     }
 

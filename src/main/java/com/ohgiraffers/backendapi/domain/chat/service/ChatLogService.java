@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +36,8 @@ public class ChatLogService {
 
     // Redis
     private final RedisTemplate<String, Object> redisTemplate;
-    private final SimpMessagingTemplate messagingTemplate;
+    // private final SimpMessagingTemplate messagingTemplate; (Removed to fix double
+    // message issue)
 
     // S3 Image Upload
     private final com.ohgiraffers.backendapi.global.service.ImageUploadService imageUploadService;
@@ -87,18 +87,9 @@ public class ChatLogService {
         ChatLog savedChat = chatLogRepository.save(chatLog);
         ChatMessageResponse response = ChatMessageResponse.from(savedChat);
 
-        // 2. [수정] 프론트엔드가 구독 중인 STOMP 경로로 메시지 전송
-        // 프론트엔드 구독 경로: websocketClient.subscribeToChatRoom -> /topic/chatroom/{roomId}
-        // RedisMessageListener와 경로 통일: /topic/chatroom/
-        String destination = "/topic/chatroom/" + request.getRoomId();
-
-        messagingTemplate.convertAndSend(destination, response);
-        log.info("Message sent to STOMP Broker [{}]: {}", destination, response.getContent());
-
-        // 3. [선택] Redis Pub/Sub (서버가 여러 대일 경우에만 필요)
-        // 단일 서버라면 아래 코드는 사실상 없어도 실시간 채팅은 동작합니다.
-        // 만약 멀티 서버 환경이라면 별도의 RedisSubscriber가 이 메시지를 받아서 다시 messagingTemplate으로 쏴줘야
-        // 합니다.
+        // 2. Redis Pub/Sub으로 메시지 발행
+        // RedisMessageListener가 이를 수신하여 WebSocket으로 브로드캐스트합니다.
+        // (이로써 단일/다중 서버 모두 지원하며 메시지 중복 전송 방지)
         String redisChannel = "chatRoom:" + request.getRoomId();
         redisTemplate.convertAndSend(redisChannel, response);
         log.info("Message sent to Redis Channel [{}]: {}", redisChannel, response.getContent());

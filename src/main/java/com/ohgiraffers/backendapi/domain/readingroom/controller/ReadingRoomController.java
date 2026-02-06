@@ -1,6 +1,7 @@
 package com.ohgiraffers.backendapi.domain.readingroom.controller;
 
 import com.ohgiraffers.backendapi.domain.readingroom.dto.CreateRoomRequest;
+import com.ohgiraffers.backendapi.domain.readingroom.enums.VoiceType;
 import com.ohgiraffers.backendapi.domain.readingroom.service.ReadingRoomService;
 import com.ohgiraffers.backendapi.global.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
@@ -95,6 +96,17 @@ public class ReadingRoomController {
             @RequestParam BigDecimal speed) {
 
         readingRoomService.updatePlaySpeed(roomId, hostId, speed);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "목소리 변경 (방장 전용)")
+    @PatchMapping("/{roomId}/voice")
+    public ResponseEntity<Void> updateVoiceType(
+            @Parameter(hidden = true) @CurrentUserId Long hostId,
+            @PathVariable Long roomId,
+            @RequestParam VoiceType voiceType) {
+
+        readingRoomService.updateVoiceType(roomId, hostId, voiceType);
         return ResponseEntity.ok().build();
     }
 
