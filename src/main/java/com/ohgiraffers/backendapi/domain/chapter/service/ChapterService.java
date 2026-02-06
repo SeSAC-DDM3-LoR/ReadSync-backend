@@ -407,12 +407,17 @@ public class ChapterService {
 
     // 저장된 파일 경로에서 JSON Node 읽기 (로컬 파일 또는 외부 URL)
     private JsonNode readFileToJsonNode(String filePath) {
-        // [Optimized] AWS S3 URL인 경우 백엔드에서 다운로드하지 않고 건너뜀 (프론트엔드 직접 다운로드 유도) -> 수정:
-        // 백엔드에서 다운로드해서 내려줌
-        // if (filePath != null && filePath.contains("amazonaws.com")) {
-        // log.info("S3 URL 접근 감지 - 백엔드 다운로드 스킵: {}", filePath);
-        // return null;
-        // }
+        // [Fix] AWS S3 URL인 경우 인증된 S3Service를 사용하여 다운로드
+        if (filePath != null && filePath.contains("amazonaws.com")) {
+            try {
+                log.info("S3 URL 감지 - 인증된 접근으로 다운로드: {}", filePath);
+                String content = s3Service.downloadFileAsString(filePath);
+                return objectMapper.readTree(content);
+            } catch (Exception e) {
+                log.error("S3 콘텐츠 다운로드/파싱 실패: {}", filePath, e);
+                throw new CustomException(ErrorCode.FILE_NOT_FOUND, "S3 파일을 읽을 수 없습니다: " + e.getMessage());
+            }
+        }
 
         // HTTP URL인 경우 (Google Drive 등)
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {

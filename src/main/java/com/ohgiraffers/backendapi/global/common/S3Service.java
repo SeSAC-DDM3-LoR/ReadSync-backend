@@ -123,6 +123,44 @@ public class S3Service {
     }
 
     /**
+     * S3에서 파일 내용을 문자열로 다운로드 (인증된 접근)
+     *
+     * @param fileUrl S3 파일 URL
+     * @return 파일 내용 (문자열)
+     */
+    public String downloadFileAsString(String fileUrl) {
+        try {
+            String splitStr = ".com/";
+            if (!fileUrl.contains(splitStr)) {
+                throw new CustomException(ErrorCode.FILE_NOT_FOUND, "유효하지 않은 S3 URL: " + fileUrl);
+            }
+            String key = fileUrl.substring(fileUrl.lastIndexOf(splitStr) + splitStr.length());
+
+            // URL 디코딩 (한글 파일명 처리)
+            key = java.net.URLDecoder.decode(key, java.nio.charset.StandardCharsets.UTF_8);
+            log.info("S3 파일 다운로드 시도: bucket={}, key={}", bucket, key);
+
+            // AWS SDK를 사용하여 파일 다운로드
+            software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest
+                    .builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+
+            software.amazon.awssdk.core.ResponseInputStream<software.amazon.awssdk.services.s3.model.GetObjectResponse> s3Object = s3Client
+                    .getObject(getObjectRequest);
+
+            String content = new String(s3Object.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            log.info("S3 파일 다운로드 성공: {} bytes", content.length());
+            return content;
+
+        } catch (Exception e) {
+            log.error("S3 파일 다운로드 실패: {}", e.getMessage());
+            throw new CustomException(ErrorCode.FILE_NOT_FOUND, "S3 파일을 다운로드할 수 없습니다: " + e.getMessage());
+        }
+    }
+
+    /**
      * 현재 계정의 모든 S3 버킷 목록 조회
      *
      * @return 버킷 이름 목록
