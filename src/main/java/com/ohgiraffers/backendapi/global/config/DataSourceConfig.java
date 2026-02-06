@@ -31,6 +31,9 @@ public class DataSourceConfig {
     @Value("${spring.datasource.url}")
     private String masterUrl;
 
+    @Value("${spring.datasource.slave-url:}")
+    private String slaveUrl;
+
     @Value("${spring.datasource.username}")
     private String username;
 
@@ -71,8 +74,13 @@ public class DataSourceConfig {
     public DataSource slaveDataSource() {
         HikariConfig config = new HikariConfig();
         config.setDriverClassName(driverClassName);
-        // Slave는 5433 포트 사용 (docker-compose.dev.yml 참고)
-        config.setJdbcUrl(masterUrl.replace(":5432", ":5433"));
+
+        // Slave URL 설정 (설정값이 없으면 기존 로직대로 5433 포트 사용)
+        String url = (slaveUrl != null && !slaveUrl.isEmpty())
+                ? slaveUrl
+                : masterUrl.replace(":5432", ":5433");
+
+        config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);
         config.setMaximumPoolSize(maxPoolSize);

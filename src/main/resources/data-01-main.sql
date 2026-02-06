@@ -8,7 +8,7 @@ TRUNCATE TABLE
     "community_posts", "categories", "book_logs", "chapters", "blacklists",
     "payment_history", "credit_type", "community_comments", "chat_logs",
     "book_ai_chat_rooms", "room_invitations", "payment_methods", "refresh_tokens",
-    "user_vectors", "book_vectors", "chapter_vectors",
+    "user_vectors", "book_vectors", "chapter_vectors", "rag_child_vectors", "rag_parent_documents",
     "subscription_plans"
     RESTART IDENTITY CASCADE;
 
