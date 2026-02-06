@@ -238,11 +238,11 @@ public class ReadingRoomService {
             String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId, voiceId, text)
                     .block(); // 동기 호출 (필요 시 비동기 처리 가능)
 
-            // WebSocket으로 오디오 URL 전송
+            // WebSocket으로 오디오 URL 전송 (프론트엔드가 구독 중인 /status 토픽으로)
             messagingTemplate.convertAndSend(
-                    "/topic/room/" + roomId,
+                    "/topic/room/" + roomId + "/status",
                     java.util.Map.of(
-                            "event", "PLAY_AUDIO",
+                            "type", "PLAY_AUDIO",
                             "audioUrl", audioUrl,
                             "chapterId", chapterId,
                             "paragraphId", paragraphId));
