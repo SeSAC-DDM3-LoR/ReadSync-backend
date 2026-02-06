@@ -9,7 +9,7 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 @Configuration
-@EnableWebSocketMessageBroker       // STOMP 메시징 활성화
+@EnableWebSocketMessageBroker // STOMP 메시징 활성화
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
@@ -27,8 +27,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // 2. 메시지 구독 요청 url (Subscribe)
-        // 예: /topic/chatroom/1 -> 이 주소를 구독하면 메시지를 받음
-        registry.enableSimpleBroker("/topic");
+        // /topic: 브로드캐스팅, /queue: 1:1 메시지
+        registry.enableSimpleBroker("/topic", "/queue");
 
         // 3. 메시지 발행 요청 url (Publish)
         // 예: /app/chat/send -> 이 주소로 보내면 @MessageMapping이 처리
