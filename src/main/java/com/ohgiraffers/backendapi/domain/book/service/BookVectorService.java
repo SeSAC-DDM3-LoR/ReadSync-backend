@@ -78,8 +78,8 @@ public class BookVectorService {
             hybridVec = new float[longVec.length];
             float sumSq = 0f;
             for (int i = 0; i < longVec.length; i++) {
-                // 가중치 비율: 장기 70%, 단기 30%
-                float val = (longVec[i] * 0.7f) + (shortVec[i] * 0.3f);
+                // 가중치 비율: 장기 65%, 단기 35% (2026-02-06 Updated: 균형점 조정)
+                float val = (longVec[i] * 0.65f) + (shortVec[i] * 0.35f);
                 hybridVec[i] = val;
                 sumSq += val * val;
             }

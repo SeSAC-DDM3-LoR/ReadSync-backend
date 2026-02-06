@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface LibraryRepository extends JpaRepository<Library, Long> {
@@ -25,4 +26,7 @@ public interface LibraryRepository extends JpaRepository<Library, Long> {
     // 유저가 소유한(삭제되지 않은) 모든 도서 ID 조회 (추천 필터링용)
     @Query("SELECT l.book.bookId FROM Library l WHERE l.user.id = :userId AND l.deletedAt IS NULL")
     List<Long> findBookIdsByUserId(@Param("userId") Long userId);
+
+    // 유저의 활성 서재 아이템 중 특정 진행률(마일스톤 30%) 이상인 책만 카운트 (부스팅 로직용)
+    long countByUserIdAndDeletedAtIsNullAndTotalProgressGreaterThanEqual(Long userId, BigDecimal progress);
 }

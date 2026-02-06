@@ -30,4 +30,11 @@ public interface BookVectorRepository extends JpaRepository<BookVector, Long> {
                         @Param("excludeIds") List<Long> excludeIds,
                         @Param("hasExcludes") boolean hasExcludes,
                         Pageable pageable);
+
+        // 카테고리별 모든 도서 벡터 조회 (배치/캐싱용)
+        @NativeQuery(value = "SELECT bv.vector " +
+                        "FROM book_vectors bv " +
+                        "JOIN books b ON bv.book_id = b.book_id " +
+                        "WHERE b.category_id = :categoryId")
+        List<Float[]> findAllVectorsByCategory(@Param("categoryId") Long categoryId);
 }
