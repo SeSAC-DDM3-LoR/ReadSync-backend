@@ -1,8 +1,8 @@
 spring:
   profiles:
-    active: prod
-#     active: dev
-#     include: oauth
-
-# frontend:
-#   url: http://lacalhost:5173
+     active: prod
+#    active: dev
+#    include: oauth
+#
+#frontend:
+#  url: http://localhost:5173
