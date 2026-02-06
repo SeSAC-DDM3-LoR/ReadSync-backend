@@ -34,10 +34,11 @@ public class TtsClient {
                 log.info("Requesting TTS audio URL from AI server: pId={}, voice={}, textLen={}",
                                 paragraphId, voiceId, text != null ? text.length() : 0);
 
-                // Request Body 객체 생성
+                // Request Body 객체 생성 (chapter_id 포함 - 캐시 키 구분용)
                 java.util.Map<String, Object> requestBody = new java.util.HashMap<>();
                 requestBody.put("text", text);
                 requestBody.put("voice_id", voiceId);
+                requestBody.put("chapter_id", chapterId);
 
                 return webClient.post()
                                 .uri(uriBuilder -> uriBuilder
