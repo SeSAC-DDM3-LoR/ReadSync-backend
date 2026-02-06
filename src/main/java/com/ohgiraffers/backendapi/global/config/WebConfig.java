@@ -20,13 +20,6 @@ public class WebConfig implements WebMvcConfigurer {
         resolvers.add(currentUserIdResolver);
     }
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOriginPatterns("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
-    }
+    // addCorsMappings removed to avoid conflict with SecurityConfig
+
 }

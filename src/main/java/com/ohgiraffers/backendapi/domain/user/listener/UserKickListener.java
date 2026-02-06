@@ -27,6 +27,9 @@ public class UserKickListener implements MessageListener {
 
             log.info("Received kick event from Redis channel [{}]: userId={}", channel, userIdStr);
 
+            // Redis Template이 JSON으로 직렬화할 경우 따옴표가 포함될 수 있음 ("1" -> ""1"")
+            userIdStr = userIdStr.replace("\"", ""); // 따옴표 제거
+
             Long userId = Long.parseLong(userIdStr);
 
             // 해당 유저에게 강제 로그아웃 메시지 전송
