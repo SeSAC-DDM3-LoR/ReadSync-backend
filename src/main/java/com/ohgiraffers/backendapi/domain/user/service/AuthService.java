@@ -48,7 +48,8 @@ public class AuthService {
                 request.getProviderId()).orElseGet(() -> register(request));
 
         if (user.getStatus() == UserStatus.WITHDRAWN) {
-            throw new CustomException(ErrorCode.LOGIN_FAILED);
+            // 탈퇴한 유저 재가입 (계정 복구)
+            user.updateStatus(UserStatus.ACTIVE);
         }
 
         return issueTokens(user); // 내부에서 킥 신호 발송함
