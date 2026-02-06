@@ -116,4 +116,18 @@ public class PaymentService {
             }
         }
     }
+
+    /**
+     * 사용자의 빌링키(결제 수단) 등록 여부를 확인합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 빌링키가 등록되어 있으면 true, 아니면 false
+     */
+    public boolean hasBillingKey(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        return !paymentMethodRepository.findByUserAndDeletedAtIsNull(user).isEmpty();
+    }
 }

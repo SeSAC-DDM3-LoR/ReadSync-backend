@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,5 +51,12 @@ public class PaymentController {
             @Valid @RequestBody BillingKeyRequest request) {
         paymentService.registerPaymentMethod(userId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "빌링키 등록 여부 확인", description = "현재 로그인한 사용자가 결제 카드를 등록했는지 확인합니다.")
+    @GetMapping("/billing-key/status")
+    public ResponseEntity<Map<String, Boolean>> getBillingKeyStatus(@CurrentUserId Long userId) {
+        boolean hasBillingKey = paymentService.hasBillingKey(userId);
+        return ResponseEntity.ok(Map.of("registered", hasBillingKey));
     }
 }
