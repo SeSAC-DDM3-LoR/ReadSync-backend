@@ -15,7 +15,7 @@ spring:
   sql:
     init:
       # mode: never
-      mode: always
+      mode: never
       continue-on-error: true
       data-locations: classpath:data-01-main.sql,classpath:data-02-rag-part1.sql,classpath:data-02-rag-part2.sql,classpath:data-02-rag-part3.sql,classpath:data-02-rag-part4.sql,classpath:data-02-rag-part5.sql
     
