@@ -82,7 +82,7 @@ public class ReadingRoomService {
         ReadingRoom savedRoom = readingRoomRepository.save(room);
 
         // 참여자 확인
-        enterRoom(hostId, savedRoom.getRoomId());
+        enterRoom(savedRoom.getRoomId(), hostId);
 
         return savedRoom.getRoomId();
     }
