@@ -225,7 +225,8 @@ public class ReadingRoomService {
         // TTS 오디오 URL 가져오기 (AI 서버 호출)
         try {
             String chapterId = "ch" + room.getCurrentChapterId();
-            String paragraphId = "p" + (room.getLastReadPos() + 1); // 다음 문단
+            // 문단 ID 형식: p_0001, p_0002 ... (4자리 zero-padding)
+            String paragraphId = String.format("p_%04d", room.getLastReadPos() + 1);
             int voiceId = room.getVoiceType().getLuxiaVoiceId(); // VoiceType에서 Luxia Voice ID 가져오기
 
             // 텍스트 내용 추출
