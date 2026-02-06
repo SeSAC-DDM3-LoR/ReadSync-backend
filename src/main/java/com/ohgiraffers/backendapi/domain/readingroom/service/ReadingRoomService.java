@@ -57,14 +57,17 @@ public class ReadingRoomService {
         Library library = libraryRepository.findById(roomRequest.getLibraryId())
                 .orElseThrow(() -> new CustomException(ErrorCode.LIBRARY_NOT_FOUND));
 
-        if (readingRoomRepository.findByHost_IdAndStatusNot(hostId, RoomStatus.FINISHED).isPresent()) {
-            throw new CustomException(ErrorCode.ROOM_ALREADY_EXISTS);
-        }
-
         // 방제 지정
         String roomName = roomRequest.getRoomName();
         if (roomName == null || roomName.isBlank()) {
             roomName = library.getBook().getTitle() + " - " + library.getBook().getAuthor();
+        }
+
+        // [수정] 관리자는 여러 방 생성 가능, 일반 유저는 1인 1방 제한
+        if (host.getRole() != com.ohgiraffers.backendapi.domain.user.enums.UserRole.ADMIN) {
+            if (readingRoomRepository.findByHost_IdAndStatusNot(hostId, RoomStatus.FINISHED).isPresent()) {
+                throw new CustomException(ErrorCode.ROOM_ALREADY_EXISTS);
+            }
         }
 
         ReadingRoom room = ReadingRoom.builder()
