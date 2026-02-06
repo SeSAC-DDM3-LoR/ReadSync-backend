@@ -31,7 +31,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -217,7 +216,15 @@ public class ReadingRoomService {
         try {
             String chapterId = "ch" + room.getCurrentChapterId();
             // 문단 ID 형식: p_0001, p_0002 ... (4자리 zero-padding)
-            String paragraphId = String.format("p_%04d", room.getLastReadPos() + 1);
+            // lastReadPos가 0이면 1(첫 문단)부터 시작, 아니면 현재 문단(lastReadPos) 재개
+            int targetPos = (room.getLastReadPos() == 0) ? 1 : room.getLastReadPos();
+            String paragraphId = String.format("p_%04d", targetPos);
+
+            // lastReadPos 업데이트 (0인 경우 1로 보정)
+            if (room.getLastReadPos() == 0) {
+                room.updateLastReadPos(room.getCurrentChapterId(), 1);
+            }
+
             int voiceId = room.getVoiceType().getLuxiaVoiceId(); // VoiceType에서 Luxia Voice ID 가져오기
 
             // 텍스트 내용 추출
@@ -259,6 +266,17 @@ public class ReadingRoomService {
         // 방장 확인 (null이면 스킵 - WebSocket 인증 문제 시 허용)
         if (hostId != null) {
             validateHost(room, hostId);
+        }
+
+        // 현재 읽고 있는 문단 위치 업데이트
+        try {
+            // p_0001 -> 1 추출
+            if (paragraphId.startsWith("p_")) {
+                int pos = Integer.parseInt(paragraphId.substring(2));
+                room.updateLastReadPos(room.getCurrentChapterId(), pos);
+            }
+        } catch (NumberFormatException e) {
+            log.warn("Failed to parse paragraphId: {}", paragraphId);
         }
 
         try {
