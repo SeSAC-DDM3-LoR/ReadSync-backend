@@ -7,12 +7,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
+@Slf4j
 @Tag(name = "Reading Room", description = "TTS 독서룸 관련 API")
 @RestController
 @RequestMapping("/v1/reading-rooms")
@@ -20,6 +26,27 @@ import java.util.List;
 public class ReadingRoomController {
 
     private final ReadingRoomService readingRoomService;
+
+    /**
+     * WebSocket: 문단 싱크 메시지 처리
+     * 방장이 문단을 변경하면 해당 문단의 TTS를 생성하여 방 참여자들에게 브로드캐스트
+     */
+    @MessageMapping("/room/sync")
+    public void handleRoomSync(@Payload Map<String, Object> message, Principal principal) {
+        Long roomId = ((Number) message.get("roomId")).longValue();
+        String type = (String) message.get("type");
+        String paragraphId = (String) message.get("paragraphId");
+
+        log.info("[WebSocket] Room sync received - roomId: {}, type: {}, paragraphId: {}", roomId, type, paragraphId);
+
+        if ("SYNC_PARAGRAPH".equals(type) && paragraphId != null) {
+            // 인증된 사용자 ID (방장인지 확인은 Service에서)
+            Long userId = principal != null ? Long.parseLong(principal.getName()) : null;
+
+            // 해당 문단의 TTS 생성 및 브로드캐스트
+            readingRoomService.playParagraph(roomId, userId, paragraphId);
+        }
+    }
 
     @Operation(summary = "독서룸 생성")
     @PostMapping

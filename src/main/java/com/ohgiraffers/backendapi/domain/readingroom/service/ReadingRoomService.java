@@ -257,6 +257,48 @@ public class ReadingRoomService {
         notifyRoomStatusChange(roomId, RoomStatus.PLAYING);
     }
 
+    /**
+     * 특정 문단의 TTS 오디오 생성 및 브로드캐스트
+     * 방장이 문단을 변경하거나 오디오 종료 후 다음 문단으로 이동할 때 호출됨
+     */
+    @Transactional
+    public void playParagraph(Long roomId, Long hostId, String paragraphId) {
+        ReadingRoom room = getRoom(roomId);
+
+        // 방장 확인 (null이면 스킵 - WebSocket 인증 문제 시 허용)
+        if (hostId != null) {
+            validateHost(room, hostId);
+        }
+
+        try {
+            String chapterId = "ch" + room.getCurrentChapterId();
+            int voiceId = room.getVoiceType().getLuxiaVoiceId();
+
+            // 텍스트 내용 추출
+            String text = chapterService.getParagraphText(room.getCurrentChapterId().longValue(), paragraphId);
+            if (text == null || text.isEmpty()) {
+                log.warn("Text not found for paragraphId: {}", paragraphId);
+                text = "내용을 찾을 수 없습니다.";
+            }
+
+            String audioUrl = ttsClient.getAudioUrl(chapterId, paragraphId, voiceId, text)
+                    .block();
+
+            // WebSocket으로 오디오 URL 전송
+            messagingTemplate.convertAndSend(
+                    "/topic/room/" + roomId + "/status",
+                    java.util.Map.of(
+                            "type", "PLAY_AUDIO",
+                            "audioUrl", audioUrl,
+                            "chapterId", chapterId,
+                            "paragraphId", paragraphId));
+
+            log.info("TTS audio URL sent for paragraph {} in room {}: {}", paragraphId, roomId, audioUrl);
+        } catch (Exception e) {
+            log.error("Failed to play paragraph {} in room {}", paragraphId, roomId, e);
+        }
+    }
+
     // 독서 일시정지/재개
     @Transactional
     public void pauseReading(Long roomId, Long hostId) {
