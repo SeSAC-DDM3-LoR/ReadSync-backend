@@ -119,7 +119,7 @@ public class AuthService {
                 .user(admin)
                 .nickname(finalNickname)
                 .tag(tag)
-                .experience(99999)
+                .experience(0)
                 .levelId(1L)
                 .preferredGenre("ALL")
                 .build();
